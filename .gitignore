@@ -1,0 +1,16 @@
+node_modules/
+.expo/
+dist/
+build/
+*.pyc
+__pycache__/
+*.db
+*.log
+*.mp4
+*.jpg
+*.png
+.env
+.env.local
+apps/api-service/dtms_vault/
+apps/api-service/dtms_local.db
+.claude/

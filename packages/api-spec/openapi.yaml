@@ -1,0 +1,303 @@
+openapi: 3.0.3
+info:
+  title: Delhi Traffic Reporting System (DTRS) API
+  description: >
+    API contracts for the DTRS Civic-Tech Traffic Enforcement Prototype.
+    This specification covers the Dual-Sync communication between the Mobile App and Cloud Data Pipeline,
+    as well as the Arbitration workflows for the Admin Dashboard.
+  version: 1.0.0
+servers:
+  - url: https://api.dtrs.delhi.gov.in/v1
+    description: Production server
+
+tags:
+  - name: Mobile App
+    description: Endpoints used by the on-ground traffic officers.
+  - name: Admin Dashboard
+    description: Endpoints used for human-in-the-loop violation arbitration and model training.
+
+paths:
+  /ping:
+    post:
+      summary: Foreground Ping (Lightweight Sync)
+      description: >
+        Receives 1-FPS extracted JPEG frames from the mobile app.
+        Returns bounding boxes and vehicle classes for real-time "Swiggy Cart" UI population.
+      tags:
+        - Mobile App
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                frame:
+                  type: string
+                  format: binary
+                  description: The 1-FPS extracted JPEG frame with embedded EXIF (GPS/Timestamp).
+                session_id:
+                  type: string
+                  example: "sess_98765abc"
+                timestamp:
+                  type: string
+                  format: date-time
+                  example: "2026-02-23T14:30:00Z"
+      responses:
+        '200':
+          description: Successful vehicle detection
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PingResponse'
+        '400':
+          description: Invalid request parameters
+        '500':
+          description: Automated model inference error
+
+  /upload:
+    post:
+      summary: Background Heavy-Lifter (Video Sync)
+      description: >
+        Asynchronous upload of high-resolution MP4 video files, triggered when an unmetered
+        (Wi-Fi/5G) connection is detected.
+      tags:
+        - Mobile App
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                video:
+                  type: string
+                  format: binary
+                  description: The raw H.265/HEVC encoded MP4 video file.
+                capture_session_id:
+                  type: string
+                  example: "sess_98765abc"
+      responses:
+        '202':
+          description: Video accepted for deep analysis (ANPR + Violation Detection)
+        '413':
+          description: Video file size exceeds limit
+        '415':
+          description: Unsupported media type
+
+  /submissions:
+    post:
+      summary: Officer's Final Submission
+      description: >
+        Finalizes the report for a capture session. Contains the officer's manual violation tags
+        linked to the unique vehicle IDs identified during the ping phase.
+      tags:
+        - Mobile App
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CopSubmission'
+      responses:
+        '201':
+          description: Submission recorded and queued for arbitration
+        '404':
+          description: Session ID not found
+
+  /arbitration/tasks:
+    get:
+      summary: List Pending Arbitrations
+      description: >
+        Fetches violations where automated detection and officer tagging require human verification.
+      tags:
+        - Admin Dashboard
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [pending, completed]
+            default: pending
+      responses:
+        '200':
+          description: A list of arbitration tasks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ArbitrationTask'
+
+  /arbitration/decide:
+    post:
+      summary: Submit Arbitration Decision
+      description: >
+        The Admin acts as the judge between Officer and Automated System. Submitting a decision triggers
+        the training vault entry for model refinement.
+      tags:
+        - Admin Dashboard
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ArbitrationDecision'
+      responses:
+        '200':
+          description: Decision recorded; training entry generated
+        '400':
+          description: Invalid decision data
+
+components:
+  schemas:
+    PingResponse:
+      type: object
+      required:
+        - session_id
+        - frame_timestamp
+        - detected_vehicles
+      properties:
+        session_id:
+          type: string
+        frame_timestamp:
+          type: string
+          format: date-time
+        detected_vehicles:
+          type: array
+          items:
+            $ref: '#/components/schemas/DetectedVehicle'
+
+    DetectedVehicle:
+      type: object
+      properties:
+        vehicle_id:
+          type: string
+          description: Temporary ID assigned by Cloud tracking.
+        class:
+          type: string
+          enum: [car, motorcycle, bus, truck, autorickshaw]
+        bounding_box:
+          $ref: '#/components/schemas/BoundingBox'
+        confidence_score:
+          type: number
+          format: float
+
+    CopSubmission:
+      type: object
+      required:
+        - officer_id
+        - capture_session_id
+        - manual_tags
+      properties:
+        officer_id:
+          type: string
+          example: "cop_4451"
+        capture_session_id:
+          type: string
+          example: "sess_98765abc"
+        gps_location:
+          type: object
+          properties:
+            latitude:
+              type: number
+            longitude:
+              type: number
+        video_reference:
+          type: string
+          description: Local URI or filename of the video stored on device.
+        manual_tags:
+          type: array
+          items:
+            type: object
+            properties:
+              vehicle_id:
+                type: string
+              flagged_violations:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ViolationType'
+        timestamp:
+          type: string
+          format: date-time
+
+    ArbitrationTask:
+      type: object
+      properties:
+        task_id:
+          type: string
+        source_session_id:
+          type: string
+        assets:
+          type: object
+          properties:
+            original_video_url:
+              type: string
+            cropped_vehicle_url:
+              type: string
+            cropped_plate_url:
+              type: string
+        ai_data:
+          type: object
+          properties:
+            detected_plate:
+              type: string
+            detected_violations:
+              type: array
+              items:
+                $ref: '#/components/schemas/ViolationType'
+        cop_data:
+          type: object
+          properties:
+            tagged_violations:
+              type: array
+              items:
+                $ref: '#/components/schemas/ViolationType'
+        consensus_match:
+          type: boolean
+          description: True if Officer and automated system agree on the violation.
+
+    ArbitrationDecision:
+      type: object
+      required:
+        - task_id
+        - admin_id
+        - decision
+      properties:
+        task_id:
+          type: string
+        admin_id:
+          type: string
+        decision:
+          type: string
+          enum: [approve, reject]
+        verified_license_plate:
+          type: string
+          description: Final verified license plate string (overrides automated detection if corrected).
+        verified_violations:
+          type: array
+          items:
+            $ref: '#/components/schemas/ViolationType'
+
+    BoundingBox:
+      type: object
+      properties:
+        x_min: { type: integer }
+        y_min: { type: integer }
+        x_max: { type: integer }
+        y_max: { type: integer }
+
+    ViolationType:
+      type: string
+      enum:
+        - parking_beyond_zebra_crossing
+        - wrong_side_driving
+        - signal_jumping
+        - no_helmet
+        - triple_riding
+        - no_seatbelt
+        - mobile_while_driving
+        - tinted_glass
+        - roadside_parking
+      description: Enumerated list of supported static violations for the MVP.

@@ -1,0 +1,9 @@
+Starting project at C:\Users\siddh\Downloads\Delhi Traffic Reporting System (DTRS)\apps\mobile-app
+Starting Metro Bundler
+Tunnel connected.
+Tunnel ready.
+The following packages should be updated for best compatibility with the installed expo version:
+  @shopify/react-native-skia@2.4.21 - expected version: 2.2.12
+Your project may not work correctly until you install the expected versions of the packages.
+Waiting on http://localhost:8081
+Logs for your project will appear below.

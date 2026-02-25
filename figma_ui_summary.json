@@ -1,0 +1,853 @@
+{
+  "Log Page": {
+    "texts": [
+      "9:30",
+      "Report Logs",
+      "Reviewables",
+      "Uploading",
+      "Friday, 20th February, 2024",
+      "4:30pm",
+      "Near Rajiv Chowk Flyover Gurugram, Haryana, 122003"
+    ],
+    "buttons": [
+      {
+        "name": "Building Blocks/status-bar",
+        "text": "9:30"
+      },
+      {
+        "name": "Check Circle Filled - 24",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "_Keylines/24px",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "_Keylines/20px",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Grid-guide",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Upload Small - 24",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "_Keylines/20px",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Grid-guide",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "footer",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Camera",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "User",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Box",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Camera",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Camera",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "List",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Book open",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Building Blocks/navigation",
+        "text": "Icon/Unknown Button"
+      }
+    ]
+  },
+  "Sign in Page": {
+    "texts": [
+      "9:30",
+      "Welcome !",
+      "Enter Employee ID",
+      "Enter Password",
+      "Sign In"
+    ],
+    "buttons": [
+      {
+        "name": "Building Blocks/status-bar",
+        "text": "9:30"
+      }
+    ]
+  },
+  "voilation tagging": {
+    "texts": [
+      "9:30",
+      "Tagged Vehicles",
+      "Vehicle 1",
+      "Overspeeding",
+      "Driving Wrong Side",
+      "No Helment",
+      "Triple Riding",
+      "No PUC",
+      "Phone use",
+      "Illegal Parking",
+      "No Seatbelt",
+      "Red Light Jump",
+      "Stop Line",
+      "False Insurance",
+      "Vehicle 2",
+      "Overspeeding",
+      "Driving Wrong Side",
+      "No Helment",
+      "Triple Riding",
+      "No PUC",
+      "Phone use",
+      "Illegal Parking",
+      "No Seatbelt",
+      "Red Light Jump",
+      "Stop Line",
+      "False Insurance",
+      "PDF",
+      "PDF",
+      "PDF",
+      "Add Comments...",
+      "Swipe to Upload",
+      "Violation Tagging"
+    ],
+    "buttons": [
+      {
+        "name": "Building Blocks/status-bar",
+        "text": "9:30"
+      },
+      {
+        "name": "Component 1",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Frame 45",
+        "text": "Overspeeding"
+      },
+      {
+        "name": "Frame 48",
+        "text": "Driving Wrong Side"
+      },
+      {
+        "name": "Frame 55",
+        "text": "No Helment"
+      },
+      {
+        "name": "Frame 46",
+        "text": "Triple Riding"
+      },
+      {
+        "name": "Frame 59",
+        "text": "No PUC"
+      },
+      {
+        "name": "Frame 72",
+        "text": "Phone use"
+      },
+      {
+        "name": "Frame 58",
+        "text": "Illegal Parking"
+      },
+      {
+        "name": "Frame 61",
+        "text": "No Seatbelt"
+      },
+      {
+        "name": "Frame 60",
+        "text": "Red Light Jump"
+      },
+      {
+        "name": "Frame 62",
+        "text": "Stop Line"
+      },
+      {
+        "name": "Frame 63",
+        "text": "False Insurance"
+      },
+      {
+        "name": "choose button",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Component 1",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Frame 45",
+        "text": "Overspeeding"
+      },
+      {
+        "name": "Frame 48",
+        "text": "Driving Wrong Side"
+      },
+      {
+        "name": "Frame 55",
+        "text": "No Helment"
+      },
+      {
+        "name": "Frame 46",
+        "text": "Triple Riding"
+      },
+      {
+        "name": "Frame 59",
+        "text": "No PUC"
+      },
+      {
+        "name": "Frame 72",
+        "text": "Phone use"
+      },
+      {
+        "name": "Frame 58",
+        "text": "Illegal Parking"
+      },
+      {
+        "name": "Frame 61",
+        "text": "No Seatbelt"
+      },
+      {
+        "name": "Frame 60",
+        "text": "Red Light Jump"
+      },
+      {
+        "name": "Frame 62",
+        "text": "Stop Line"
+      },
+      {
+        "name": "Frame 63",
+        "text": "False Insurance"
+      },
+      {
+        "name": "choose button",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "input",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "scroll to anchor",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "arrow.down - 24",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "_Keylines/24px",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "attachment",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "X Small - 24",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "_Keylines/20px",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Grid-guide",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "attachment",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "X Small - 24",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "_Keylines/20px",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Grid-guide",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "attachment",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "X Small - 24",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "_Keylines/20px",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Grid-guide",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "attachment",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "X Small - 24",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "_Keylines/20px",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Grid-guide",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "button row",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "leading buttons",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "add",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Plus",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "tools",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Filter - 24",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "_Keylines/24px",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "trailing buttons",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "dictation",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Microphone - 24",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "_Keylines/24px",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "voice mode",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Voice - 24",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "_Keylines/24px",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "send",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Arrow Up - 24",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "_Keylines/24px",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Arrow right",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "arrow animation",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "chevron_backward",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "footer",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Camera",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "User",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Box",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Camera",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Camera",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "List",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Book open",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Building Blocks/navigation",
+        "text": "Icon/Unknown Button"
+      }
+    ]
+  },
+  "uploading page": {
+    "texts": [
+      "Report Logs",
+      "Reviewables",
+      "Uploading",
+      "78% Uploaded",
+      "cancel",
+      "Friday, 20th February, 2024",
+      "4:30pm",
+      "Near Rajiv Chowk Flyover Gurugram, Haryana, 122003",
+      "9:30"
+    ],
+    "buttons": [
+      {
+        "name": "Check Circle Filled - 24",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "_Keylines/24px",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "_Keylines/20px",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Grid-guide",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Upload Small - 24",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "_Keylines/20px",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Grid-guide",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "header",
+        "text": "9:30"
+      },
+      {
+        "name": "footer",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Camera",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "User",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Box",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Camera",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Camera",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "List",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Book open",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Building Blocks/navigation",
+        "text": "Icon/Unknown Button"
+      }
+    ]
+  },
+  "rule page": {
+    "texts": [
+      "9:30",
+      "Traffic Rules",
+      "🚦 SIGNAL, LANE & ROAD BEHAVIOUR [ID 01] Jumping Red Light  1st Offence: Court Challan  Repeat: Court Challan [ID 02] Violation of Stop Sign (Missing Sign Case)  1st Offence: Court Challan  Repeat: Court Challan [ID 03] Violation of Stop Line  1st Offence: ₹500  Repeat: ₹1,500 [ID 04] Violation of Mandatory Signs (One Way / No Right Turn etc.)  1st Offence: ₹500  Repeat: ₹1,500 [ID 05] Violation of Yellow Line  1st Offence: ₹500  Repeat: ₹1,500 [ID 06] Violation of No Entry (Time-Specific Restriction)  1st Offence: ₹20,000  Repeat: ₹20,000 [ID 07] Driving in NMV (Non-Motorized Vehicle) Lane  1st Offence: ₹20,000  Repeat: ₹20,000 [ID 08] Driving on Footpath / Cycle Track  1st Offence: Court Challan  Repeat: Court Challan [ID 09] Driving Against Authorized Traffic Flow (Wrong Side)  1st Offence: Court Challan  Repeat: Court Challan [ID 10] Wrong Passing / Overtaking  1st Offence: Court Challan  Repeat: Court Challan [ID 11] Left Turn Without Indicator (Indicator Missing Case)  1st Offence: ₹500  Repeat: ₹1,500 [ID 12] Dangerous Driving  1st Offence: Court Challan  Repeat: Court Challan  🪖 SAFETY GEAR & PASSENGERS [ID 13] Driving Without Helmet (Rider or Pillion)  1st Offence: ₹1,000  Repeat: ₹1,000 [ID 14] Helmet Without Strap / Strap Untied  1st Offence: ₹1,000  Repeat: ₹1,000 [ID 15] Defective Helmet (Not BIS Standard)  1st Offence: ₹1,000  Repeat: ₹1,000 [ID 16] Not Using Seatbelt  1st Offence: ₹1,000  Repeat: ₹1,000 [ID 17] Triple Riding on Two-Wheeler  1st Offence: ₹1,000  Repeat: ₹1,000 [ID 18] Travelling on Running Board — Passenger  1st Offence: ₹500  Repeat: ₹1,500 [ID 19] Travelling on Running Board — Driver  1st Offence: ₹500  Repeat: ₹1,500 [ID 20] Obstructive Driving (Extra Passenger on Driver Seat)  1st Offence: ₹500  Repeat: ₹1,500 [ID 21] Carrying Passenger on Goods Vehicle  1st Offence: Court Challan  Repeat: Court Challan [ID 22] Carrying Goods on Passenger Vehicle  1st Offence: ₹500  Repeat: ₹1,500 [ID 23] Animal Transport Not as per CMVR 125E(2)  1st Offence: ₹500  Repeat: ₹1,500 [ID 24] Juvenile Driving (Under 18)  1st Offence: Court Challan  Repeat: Court Challan  📱 MOBILE & DISTRACTION [ID 25] Use of Handheld Communication Device While Driving  1st Offence: ₹5,000  Repeat: ₹10,000 [ID 26] Playing Loud Music While Driving  1st Offence: ₹500  Repeat: ₹1,500  🔢 NUMBER PLATE & MARKINGS [ID 27] Defective / Fancy / Not Displaying Number Plate  1st Offence: ₹5,000  Repeat: ₹10,000 [ID 28] Unauthorized Advertisement on Vehicle  1st Offence: ₹500  Repeat: ₹1,500  💡 LIGHTING [ID 29] Driving Without Lights After Sunset  1st Offence: ₹500  Repeat: ₹1,500 [ID 30] Inappropriate Use of High Beam  1st Offence: ₹500  Repeat: ₹1,500 [ID 31] Top Light Violation (PSV / Taxi)  1st Offence: ₹500  Repeat: ₹1,500 [ID 32] Use of Coloured Light on Motor Vehicle  1st Offence: ₹500  Repeat: ₹1,500 [ID 33] Unauthorized Use of Siren  1st Offence: ₹500  Repeat: ₹1,500 [ID 34] Driving Without Reflector  1st Offence: ₹500  Repeat: ₹1,500  📣 HORN, NOISE & SMOKE [ID 35] Use of Pressure Horn  1st Offence: ₹5,000  Repeat: ₹10,000 [ID 36] Honking in Silence / No-Honking Zone  1st Offence: ₹1,000  Repeat: ₹2,000 [ID 37] Driving Without Horn (Missing Horn)  1st Offence: ₹500  Repeat: ₹1,500 [ID 38] Excess Smoke Emission  1st Offence: ₹500  Repeat: ₹1,500  🚗 VEHICLE APPEARANCE & CONDITION [ID 39] Tinted Glass / Sunfilm  1st Offence: ₹500  Repeat: ₹1,500 [ID 40] Driving Without Wiper  1st Offence: ₹500  Repeat: ₹1,500 [ID 41] Rear View Mirror Turned Inwards  1st Offence: ₹500  Repeat: ₹1,500 [ID 42] Carrying High / Protruding Load  1st Offence: ₹20,000  Repeat: ₹20,000 [ID 43] Truck Carrying Sand / Dust Without Cover  1st Offence: ₹20,000  Repeat: ₹20,000 [ID 44] Plying Illegal Makeshift Vehicle (Jugad)  1st Offence: Court Challan  Repeat: Court Challan [ID 45] Dangerous Goods by Common Carrier  1st Offence: Court Challan  Repeat: Court Challan  🚕 PUBLIC SERVICE VEHICLE (PSV) [ID 46] Conductor Without Badge  1st Offence: ₹500  Repeat: ₹1,500 [ID 47] Conductor Without Uniform  1st Offence: ₹500  Repeat: ₹1,500 [ID 48] Smoking by Driver / Conductor  1st Offence: ₹500  Repeat: ₹1,500 [ID 49] Smoking in Vehicle (General Case)  1st Offence: ₹500  Repeat: ₹1,500 [ID 50] Touting (Shouting for Passengers)  1st Offence: Court Challan  Repeat: Court Challan  🚨 EMERGENCY & AUTHORITY [ID 51] Not Giving Way to Emergency Vehicle  1st Offence: ₹10,000  Repeat: ₹10,000 [ID 52] Disobeying Lawful Direction of Police  1st Offence: ₹2,000  Repeat: ₹2,000 [ID 53] Disobeying Direction During Accident / Property Damage  1st Offence: ₹2,000  Repeat: ₹2,000 [ID 54] Misbehaviour with Police Officer  1st Offence: ₹2,000  Repeat: ₹2,000  🅿️ PARKING [ID 55] Improper / Obstructive Parking  1st Offence: ₹500  Repeat: ₹1,500  ❌ EXCLUDED (Not Visually Confirmable) Use this as a separate section in UI: Without Permit / Permit Violation Without Log Book Without Fitness Certificate Conductor Without Licence Driving Without Licence Allowing Unauthorized Person to Drive Without Insurance Without PUCC RC Violation Old Age Vehicle Violation (15/10 Year Diesel/Petrol) Drunken Driving (Requires Breath Analyzer) Overspeeding (Requires Speed Detection Device)"
+    ],
+    "buttons": [
+      {
+        "name": "Building Blocks/status-bar",
+        "text": "9:30"
+      },
+      {
+        "name": "footer",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Camera",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "User",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Box",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Camera",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Camera",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "List",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Book open",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Building Blocks/navigation",
+        "text": "Icon/Unknown Button"
+      }
+    ]
+  },
+  "Dashboard": {
+    "texts": [
+      "9:30",
+      "Performance Dashboard",
+      "Accuracy Score",
+      "88%",
+      "Ranking",
+      "11125th",
+      "Reports  Submitted",
+      "140",
+      "Reports  Under Review",
+      "36",
+      "see how your performance has been !",
+      "Leaderboard",
+      "490 pts"
+    ],
+    "buttons": [
+      {
+        "name": "footer",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Camera",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "User",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Box",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Camera",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Camera",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "List",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Book open",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Building Blocks/navigation",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Building Blocks/status-bar",
+        "text": "9:30"
+      },
+      {
+        "name": "User - 24",
+        "text": "Icon/Unknown Button"
+      }
+    ]
+  },
+  "leaderboard": {
+    "texts": [
+      "9:30",
+      "1000 pts",
+      "Performance Dashboard",
+      "see how your performance has been !",
+      "Leaderboard",
+      "490 pts",
+      "Rewards & Milestones (0–2000 Points Scale)",
+      "🔹 250 Points — Digital Commendation Badge  Official badge displayed on profile.  🔹 500 Points — Performance Certificate  Department-issued recognition certificate.  🔹 750 Points — Bronze Enforcement Star  Recognized for consistent validated reporting.  🔹 1000 Points — Silver Enforcement Star  High accuracy & reliability milestone.  🔹 1250 Points — Priority Leave Credit (1 Day)  Eligible for 1 additional casual leave credit.  🔹 1500 Points — Zone Excellence Recognition  Recognized among top performers in assigned zone.  🔹 1750 Points — Gold Enforcement Star  Outstanding sustained performance recognition.  🔹 2000 Points — Commissioner’s Merit Recognition  Highest-tier honor for exceptional enforcement integrity."
+    ],
+    "buttons": [
+      {
+        "name": "footer",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Camera",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "User",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Box",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Camera",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Camera",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "List",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Book open",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Building Blocks/navigation",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Building Blocks/status-bar",
+        "text": "9:30"
+      },
+      {
+        "name": "User - 24",
+        "text": "Icon/Unknown Button"
+      }
+    ]
+  },
+  "profile page": {
+    "texts": [
+      "9:30",
+      "Profile",
+      "Ravi Chandra Kumar",
+      "Field Officer"
+    ],
+    "buttons": [
+      {
+        "name": "Building Blocks/status-bar",
+        "text": "9:30"
+      },
+      {
+        "name": "footer",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Camera",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "User",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Box",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Camera",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Camera",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "List",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Book open",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Building Blocks/navigation",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "User - 24",
+        "text": "Icon/Unknown Button"
+      }
+    ]
+  },
+  "Recording Screen": {
+    "texts": [
+      "00:00:30",
+      "9:30"
+    ],
+    "buttons": [
+      {
+        "name": "footer",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Camera",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "User",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Box",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Camera",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Camera",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "List",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Book open",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Building Blocks/navigation",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Building Blocks/status-bar",
+        "text": "9:30"
+      }
+    ]
+  },
+  "After Recording Screen": {
+    "texts": [
+      "9:30",
+      "20 Feb 2024",
+      "5:34 pm",
+      "Save"
+    ],
+    "buttons": [
+      {
+        "name": "footer",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Camera",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "User",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Box",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Camera",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Camera",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "List",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Book open",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Building Blocks/navigation",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Building Blocks/status-bar",
+        "text": "9:30"
+      },
+      {
+        "name": "X",
+        "text": "Icon/Unknown Button"
+      },
+      {
+        "name": "Arrow right",
+        "text": "Icon/Unknown Button"
+      }
+    ]
+  }
+}
