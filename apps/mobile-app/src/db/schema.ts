@@ -1,7 +1,7 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb'
 
 export default appSchema({
-  version: 4,
+  version: 5,
   tables: [
     tableSchema({
       name: 'session_data',
@@ -24,6 +24,18 @@ export default appSchema({
         { name: 'system_tags', type: 'string', isOptional: true },
         { name: 'local_video_path', type: 'string' },
         { name: 'video_hash', type: 'string', isOptional: true },
+        { name: 'created_at', type: 'number' },
+        { name: 'updated_at', type: 'number' },
+      ]
+    }),
+    tableSchema({
+      name: 'vehicle_detections',
+      columns: [
+        { name: 'challan_record_id', type: 'string', isIndexed: true },
+        { name: 'vehicle_identifier', type: 'string' },
+        { name: 'thumbnail_uri', type: 'string', isOptional: true },
+        // json string
+        { name: 'manual_tags', type: 'string', isOptional: true },
         { name: 'created_at', type: 'number' },
         { name: 'updated_at', type: 'number' },
       ]

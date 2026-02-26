@@ -1,5 +1,6 @@
-import { Model } from '@nozbe/watermelondb'
-import { field, text, json, readonly, date } from '@nozbe/watermelondb/decorators'
+import { Model, Query } from '@nozbe/watermelondb'
+import { field, text, json, readonly, date, children } from '@nozbe/watermelondb/decorators'
+import { VehicleDetection } from './VehicleDetection'
 
 const sanitizeTags = (rawTags: string | undefined): string[] => {
   if (!rawTags) return []
@@ -12,6 +13,12 @@ const sanitizeTags = (rawTags: string | undefined): string[] => {
 
 export class ChallanRecord extends Model {
   static table = 'challan_records'
+
+  static associations = {
+    vehicle_detections: { type: 'has_many', foreignKey: 'challan_record_id' },
+  } as const
+
+  @children('vehicle_detections') vehicleDetections!: Query<VehicleDetection>
 
   @text('session_id') sessionId!: string
   // draft, syncing, uploaded

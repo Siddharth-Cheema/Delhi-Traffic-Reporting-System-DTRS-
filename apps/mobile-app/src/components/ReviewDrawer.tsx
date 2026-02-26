@@ -13,6 +13,7 @@ import {
 import { useCaptureStore } from '../store/useCaptureStore';
 import { database } from '../db';
 import { ChallanRecord } from '../db/models/ChallanRecord';
+import { VehicleDetection } from '../db/models/VehicleDetection';
 import { DualSyncService } from '../services/DualSyncService';
 import { useAuthStore } from '../store/useAuthStore';
 
@@ -37,7 +38,7 @@ interface ReviewDrawerProps {
 }
 
 export const ReviewDrawer: React.FC<ReviewDrawerProps> = ({ isVisible, onClose }) => {
-  const [drafts, setDrafts] = useState<ChallanRecord[]>([]);
+  const [drafts, setDrafts] = useState<(ChallanRecord & { vehicles: VehicleDetection[] })[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const { clearDrafts, checkLockoutStatus } = useCaptureStore();
@@ -56,9 +57,17 @@ export const ReviewDrawer: React.FC<ReviewDrawerProps> = ({ isVisible, onClose }
         .query()
         .fetch();
 
-      // fetch pending and stuck syncing records
       const draftRecords = records.filter(r => r.status === 'DRAFT' || r.status === 'SYNCING');
-      setDrafts(draftRecords);
+
+      // Fetch associated vehicles for each draft
+      const draftsWithVehicles = await Promise.all(
+        draftRecords.map(async (record) => {
+          const vehicles = await record.vehicleDetections.fetch();
+          return Object.assign(record, { vehicles });
+        })
+      );
+
+      setDrafts(draftsWithVehicles);
       checkLockoutStatus(draftRecords.length);
     } catch (error) {
       console.error('Error loading drafts:', error);
@@ -67,22 +76,22 @@ export const ReviewDrawer: React.FC<ReviewDrawerProps> = ({ isVisible, onClose }
     }
   };
 
-  const toggleTag = async (record: ChallanRecord, tag: string) => {
+  const toggleVehicleTag = async (vehicle: VehicleDetection, tag: string) => {
     try {
       await database.write(async () => {
-        const currentTags = record.manualTags || [];
+        const currentTags = vehicle.manualTags || [];
         const newTags = currentTags.includes(tag)
           ? currentTags.filter(t => t !== tag)
           : [...currentTags, tag];
 
-        await record.update(r => {
-          r.manualTags = newTags;
+        await vehicle.update(v => {
+          v.manualTags = newTags;
         });
       });
-      // refresh UI
+      // Refresh UI
       await loadDrafts();
     } catch (error) {
-      console.error('Error updating tags:', error);
+      console.error('Error updating vehicle tags:', error);
     }
   };
 
@@ -96,9 +105,12 @@ export const ReviewDrawer: React.FC<ReviewDrawerProps> = ({ isVisible, onClose }
     let successCount = 0;
 
     try {
+      // Validate that at least one vehicle has tags
       for (const record of drafts) {
-        if (!record.manualTags || record.manualTags.length === 0) {
-          Alert.alert('Missing Tags', `Please add at least one violation tag for record ...${record.sessionId.slice(-6)}`);
+        const hasAnyTags = record.vehicles.some(v => v.manualTags && v.manualTags.length > 0);
+
+        if (!hasAnyTags && record.vehicles.length > 0) {
+          Alert.alert('Missing Tags', `Please add at least one violation tag to a vehicle for video ...${record.sessionId.slice(-6)}`);
           setSubmitting(false);
           return;
         }
@@ -130,31 +142,43 @@ export const ReviewDrawer: React.FC<ReviewDrawerProps> = ({ isVisible, onClose }
     }
   };
 
-  const renderDraftItem = ({ item }: { item: ChallanRecord }) => {
+  const renderDraftItem = ({ item }: { item: ChallanRecord & { vehicles: VehicleDetection[] } }) => {
     return (
       <View style={styles.draftItem}>
         <View style={styles.draftHeader}>
-          <Text style={styles.draftId}>ID: ...{item.sessionId.slice(-8)}</Text>
+          <Text style={styles.draftId}>Video: ...{item.sessionId.slice(-8)}</Text>
           <Text style={styles.draftStatus}>{item.status}</Text>
         </View>
 
-        <Text style={styles.tagsLabel}>Select Violation Tags:</Text>
-        <View style={styles.tagsContainer}>
-          {VIOLATION_TAGS.map(tag => {
-            const isSelected = item.manualTags?.includes(tag);
-            return (
-              <TouchableOpacity
-                key={tag}
-                style={[styles.tagButton, isSelected && styles.tagButtonSelected]}
-                onPress={() => toggleTag(item, tag)}
-              >
-                <Text style={[styles.tagText, isSelected && styles.tagTextSelected]}>
-                  {tag.replace(/_/g, ' ')}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+        {item.vehicles.length === 0 ? (
+           <Text style={styles.noVehiclesText}>No vehicles detected in this video yet.</Text>
+        ) : (
+          item.vehicles.map((vehicle, index) => (
+            <View key={vehicle.id} style={styles.vehicleContainer}>
+              <View style={styles.vehicleHeader}>
+                <Text style={styles.vehicleTitle}>Vehicle {index + 1} ({vehicle.vehicleIdentifier.split('_')[0]})</Text>
+              </View>
+
+              <Text style={styles.tagsLabel}>Select Violation Tags:</Text>
+              <View style={styles.tagsContainer}>
+                {VIOLATION_TAGS.map(tag => {
+                  const isSelected = vehicle.manualTags?.includes(tag);
+                  return (
+                    <TouchableOpacity
+                      key={tag}
+                      style={[styles.tagButton, isSelected && styles.tagButtonSelected]}
+                      onPress={() => toggleVehicleTag(vehicle, tag)}
+                    >
+                      <Text style={[styles.tagText, isSelected && styles.tagTextSelected]}>
+                        {tag.replace(/_/g, ' ')}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+          ))
+        )}
       </View>
     );
   };
@@ -294,6 +318,27 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 4,
     overflow: 'hidden',
+  },
+  noVehiclesText: {
+    fontStyle: 'italic',
+    color: '#888',
+    marginTop: 10,
+  },
+  vehicleContainer: {
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+  },
+  vehicleHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  vehicleTitle: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    color: '#007AFF',
   },
   tagsLabel: {
     fontSize: 14,

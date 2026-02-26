@@ -26,11 +26,31 @@ export default function ArbitrationPage() {
   const isProcessingRef = useRef(false)
   const lastActionTimeRef = useRef(0)
 
+  // Edit State
+  const [isEditingPlate, setIsEditingPlate] = useState(false)
+  const [editedPlate, setEditedPlate] = useState('')
+  const [isEditingViolation, setIsEditingViolation] = useState(false)
+  const [editedViolation, setEditedViolation] = useState('')
+  const [isVideoMode, setIsVideoMode] = useState(false)
+
+  // Update edit state when a new task is selected
+  useEffect(() => {
+    if (selectedTask) {
+      setEditedPlate(selectedTask.vehicle_number || '')
+      setEditedViolation(selectedTask.system_violation || '')
+      setIsEditingPlate(false)
+      setIsEditingViolation(false)
+      setIsVideoMode(false)
+    }
+  }, [selectedTask])
+
   const mutation = useMutation({
-    mutationFn: (decisionData: { id: string, decision: string, childException: boolean }) => {
+    mutationFn: (decisionData: { id: string, decision: string, childException: boolean, correctedPlate?: string, correctedViolation?: string }) => {
       return axios.post(`${API_BASE_URL}/api/v1/arbitration/decide/${decisionData.id}`, {
         decision: decisionData.decision,
-        child_passenger_exception: decisionData.childException
+        child_passenger_exception: decisionData.childException,
+        corrected_vehicle_number: decisionData.correctedPlate,
+        corrected_violation: decisionData.correctedViolation
       })
     },
     onMutate: () => {
@@ -79,26 +99,42 @@ export default function ArbitrationPage() {
 
     lastActionTimeRef.current = now;
 
+    const hasPlateChanged = editedPlate !== selectedTask.vehicle_number;
+    const hasViolationChanged = editedViolation !== selectedTask.system_violation;
+
     mutation.mutate({
       id: selectedTask.id,
       decision,
-      childException
+      childException,
+      correctedPlate: hasPlateChanged ? editedPlate : undefined,
+      correctedViolation: hasViolationChanged ? editedViolation : undefined
     })
   }
 
   // keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Disable shortcuts if we are typing in an input field or using a dropdown
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        e.target instanceof HTMLSelectElement
+      ) {
+        return;
+      }
+
       if (!selectedTask || mutation.isPending || isProcessingRef.current) return;
       if (e.key === 'a' || e.key === 'A') {
         handleDecision('approve')
       } else if (e.key === 'r' || e.key === 'R') {
         handleDecision('reject')
+      } else if (e.key === 'v' || e.key === 'V') {
+        if (selectedTask.video_url) setIsVideoMode(prev => !prev)
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedTask, mutation.isPending, childException]);
+  }, [selectedTask, mutation.isPending, childException, editedPlate, editedViolation]);
 
   if (isLoading) return (
     <div className="p-8 flex items-center justify-center h-screen bg-[#020617]">
@@ -259,9 +295,35 @@ export default function ArbitrationPage() {
 
               {/* visual evidence */}
               <div className="w-full max-w-5xl bg-slate-900/30 border border-slate-700/30 rounded-[2rem] overflow-hidden backdrop-blur-sm shadow-2xl">
-                <div className="p-2">
+                <div className="p-2 relative">
+                  {selectedTask.video_url && (
+                    <button
+                      onClick={() => setIsVideoMode(!isVideoMode)}
+                      className="absolute top-4 right-4 z-20 bg-slate-800/80 hover:bg-blue-600 backdrop-blur-md text-white px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-colors border border-slate-600/50 flex items-center space-x-2"
+                    >
+                      {isVideoMode ? (
+                        <>
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                          <span>View Best Frame</span>
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                          <span>Play Source Video (V)</span>
+                        </>
+                      )}
+                    </button>
+                  )}
+
                   <div className="relative rounded-[1.8rem] overflow-hidden bg-black flex justify-center items-center aspect-video shadow-inner">
-                    {selectedTask.evidence_image_url ? (
+                    {isVideoMode && selectedTask.video_url ? (
+                      <video
+                        src={selectedTask.video_url}
+                        controls
+                        autoPlay
+                        className="w-full h-full object-cover"
+                      />
+                    ) : selectedTask.evidence_image_url ? (
                       <img src={selectedTask.evidence_image_url} alt="Evidence" className="w-full h-full object-cover" />
                     ) : (
                       <div className="flex flex-col items-center space-y-4">
@@ -270,29 +332,43 @@ export default function ArbitrationPage() {
                       </div>
                     )}
 
-                    {/* detection overlay */}
-                    <svg className="absolute top-0 left-0 w-full h-full pointer-events-none" viewBox="0 0 800 600" preserveAspectRatio="none">
-                      <rect x="280" y="140" width="240" height="320" fill="rgba(59, 130, 246, 0.15)" stroke="#3b82f6" strokeWidth="4" rx="12" />
-                      <path d="M280 140 L340 140 L340 170 L280 170 Z" fill="#3b82f6" />
-                      <text x="286" y="160" fill="white" fontSize="12" fontWeight="bold" fontFamily="monospace">DET_{selectedTask.system_violation}</text>
-                    </svg>
+                    {/* detection overlay - only show on image */}
+                    {!isVideoMode && (
+                      <svg className="absolute top-0 left-0 w-full h-full pointer-events-none" viewBox="0 0 800 600" preserveAspectRatio="none">
+                        <rect x="280" y="140" width="240" height="320" fill="rgba(59, 130, 246, 0.15)" stroke="#3b82f6" strokeWidth="4" rx="12" />
+                        <path d="M280 140 L340 140 L340 170 L280 170 Z" fill="#3b82f6" />
+                        <text x="286" y="160" fill="white" fontSize="12" fontWeight="bold" fontFamily="monospace">DET_{selectedTask.system_violation}</text>
+                      </svg>
+                    )}
                   </div>
                 </div>
 
                 <div className="px-10 py-6 bg-slate-900/50 flex justify-between items-center border-t border-slate-800/50">
-                  <div className="flex items-center space-x-6">
-                    <div className="flex flex-col">
-                      <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-1 text-left">Plate Recognition</span>
-                      <span className="text-xl font-black text-white tracking-widest font-mono uppercase">{selectedTask.vehicle_number || 'SCAN_PENDING'}</span>
+                  <div className="flex items-center space-x-6 w-full">
+                    <div className="flex flex-col w-full max-w-sm">
+                      <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-2 text-left">Plate Recognition (Click to Edit)</span>
+                      {isEditingPlate ? (
+                        <input
+                          type="text"
+                          value={editedPlate}
+                          onChange={(e) => setEditedPlate(e.target.value.toUpperCase())}
+                          onBlur={() => setIsEditingPlate(false)}
+                          onKeyDown={(e) => e.key === 'Enter' && setIsEditingPlate(false)}
+                          autoFocus
+                          className="bg-slate-950 border border-blue-500 text-xl font-black text-white tracking-widest font-mono uppercase px-4 py-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 w-full"
+                        />
+                      ) : (
+                        <div
+                          onClick={() => setIsEditingPlate(true)}
+                          className="group flex items-center space-x-3 cursor-pointer p-2 -ml-2 rounded-xl hover:bg-slate-800/50 transition-colors"
+                        >
+                          <span className={`text-xl font-black tracking-widest font-mono uppercase ${editedPlate !== selectedTask.vehicle_number ? 'text-yellow-400' : 'text-white'}`}>
+                            {editedPlate || 'SCAN_PENDING'}
+                          </span>
+                          <svg className="w-4 h-4 text-slate-600 group-hover:text-blue-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                  <div className="flex space-x-3">
-                    <button className="p-3 bg-slate-800 rounded-xl hover:bg-slate-700 transition-colors text-slate-400">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"></path></svg>
-                    </button>
-                    <button className="p-3 bg-slate-800 rounded-xl hover:bg-slate-700 transition-colors text-slate-400">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                    </button>
                   </div>
                 </div>
               </div>
@@ -333,7 +409,33 @@ export default function ArbitrationPage() {
                    <div className="space-y-4">
                       <div className="flex justify-between items-center py-3 border-b border-slate-800/50">
                          <span className="text-slate-400 text-sm font-medium">Primary Detection</span>
-                         <span className={`font-bold ${hasConsensus ? 'text-emerald-400' : 'text-blue-400'}`}>{selectedTask.system_violation}</span>
+                         {isEditingViolation ? (
+                            <select
+                              value={editedViolation}
+                              onChange={(e) => setEditedViolation(e.target.value)}
+                              onBlur={() => setIsEditingViolation(false)}
+                              autoFocus
+                              className="bg-slate-950 border border-blue-500 text-sm font-bold text-white px-3 py-1 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                            >
+                              <option value="NO_HELMET">NO_HELMET</option>
+                              <option value="TRIPLE_RIDING">TRIPLE_RIDING</option>
+                              <option value="WRONG_SIDE">WRONG_SIDE</option>
+                              <option value="RED_LIGHT_JUMP">RED_LIGHT_JUMP</option>
+                              <option value="DEFECTIVE_NUMBER_PLATE">DEFECTIVE_NUMBER_PLATE</option>
+                              <option value="USE_OF_MOBILE">USE_OF_MOBILE</option>
+                              <option value="OVERSPEEDING">OVERSPEEDING</option>
+                            </select>
+                         ) : (
+                           <div
+                              onClick={() => setIsEditingViolation(true)}
+                              className="group flex items-center space-x-2 cursor-pointer"
+                           >
+                              <span className={`font-bold ${editedViolation !== selectedTask.system_violation ? 'text-yellow-400' : (hasConsensus ? 'text-emerald-400' : 'text-blue-400')}`}>
+                                {editedViolation}
+                              </span>
+                              <svg className="w-3 h-3 text-slate-600 group-hover:text-blue-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                           </div>
+                         )}
                       </div>
                       <div className="flex justify-between items-center py-3 border-b border-slate-800/50">
                          <span className="text-slate-400 text-sm font-medium">Probability Score</span>

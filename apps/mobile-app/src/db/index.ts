@@ -4,6 +4,7 @@ import SQLiteAdapter from '@nozbe/watermelondb/adapters/sqlite';
 import schema from './schema';
 import { SessionData } from './models/SessionData';
 import { ChallanRecord } from './models/ChallanRecord';
+import { VehicleDetection } from './models/VehicleDetection';
 
 const adapter = new SQLiteAdapter({
   schema,
@@ -19,5 +20,6 @@ export const database = new Database({
   modelClasses: [
     SessionData,
     ChallanRecord,
+    VehicleDetection,
   ],
 });

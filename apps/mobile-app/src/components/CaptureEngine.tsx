@@ -1,28 +1,76 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, Alert } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, Alert, Platform } from 'react-native';
 import { Camera, useCameraDevice, useFrameProcessor } from 'react-native-vision-camera';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
+import * as Location from 'expo-location';
+import { Video } from 'react-native-compressor';
+import { runOnJS } from 'react-native-reanimated';
 import { useCaptureStore } from '../store/useCaptureStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { database } from '../db';
 import { ChallanRecord } from '../db/models/ChallanRecord';
+import { VehicleDetection } from '../db/models/VehicleDetection';
 import { DualSyncService } from '../services/DualSyncService';
+
+// Keep track of the active session ID outside react state so the worklet can access it
+let currentActiveSessionId: string | null = null;
 
 export default function CaptureEngine() {
   const device = useCameraDevice('back');
   const camera = useRef<Camera>(null);
   const [isRecording, setIsRecording] = useState(false);
+  const [location, setLocation] = useState<Location.LocationObject | null>(null);
+  const [currentTime, setCurrentTime] = useState(new Date());
+
   const navigation = useNavigation<NavigationProp<any>>();
   const { draftCount, isLockedOut, incrementDrafts, checkLockoutStatus } = useCaptureStore();
   const { officerId } = useAuthStore();
 
-  // sync on mount to recover any stuck records
+  // Clock tick for overlay
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Location for overlay
+  useEffect(() => {
+    (async () => {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') return;
+
+      let loc = await Location.getCurrentPositionAsync({});
+      setLocation(loc);
+
+      // Update location every 10 seconds while camera is open
+      const locWatcher = await Location.watchPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+        timeInterval: 10000,
+        distanceInterval: 10
+      }, (newLoc) => setLocation(newLoc));
+
+      return () => locWatcher.remove();
+    })();
+  }, []);
+
+  // sync on mount to recover any stuck records and clear zombies
   useEffect(() => {
     const initializeApp = async () => {
       try {
         const RNFS = await import('react-native-fs');
         const records = await database.get<ChallanRecord>('challan_records').query().fetch();
 
+        // 1. CLEAR ZOMBIE RECORDS (crashes during recording)
+        const zombieRecords = records.filter(r => r.localVideoPath === 'RECORDING_IN_PROGRESS');
+        if (zombieRecords.length > 0) {
+          console.log(`Cleaning up ${zombieRecords.length} zombie records...`);
+          await database.write(async () => {
+            for (const zombie of zombieRecords) {
+              await zombie.destroyPermanently();
+            }
+          });
+        }
+
+        // 2. RECOVER STUCK SYNCING
         const stuckRecords = records.filter(r => r.status === 'SYNCING');
         if (stuckRecords.length > 0) {
           await database.write(async () => {
@@ -76,8 +124,56 @@ export default function CaptureEngine() {
   }, [checkLockoutStatus]);
 
   // 1fps headless frame extractor
+  const handleFastPing = async (frameDataUri: string) => {
+    if (!currentActiveSessionId || !location) return;
+    try {
+       const response = await DualSyncService.fastPing(frameDataUri, {
+         lat: location.coords.latitude,
+         lng: location.coords.longitude
+       });
+
+       if (response && response.detections && response.detections.length > 0) {
+         // Create local DB records for the newly found vehicles
+         await database.write(async () => {
+            const record = await database.get<ChallanRecord>('challan_records').find(currentActiveSessionId!);
+            if (!record) return;
+
+            for (const detection of response.detections) {
+               // Only add if it's a vehicle (e.g. car, motorcycle) and not just a person
+               if (['car', 'motorcycle', 'bus', 'truck', 'auto_rickshaw'].includes(detection.class)) {
+                   await database.get<VehicleDetection>('vehicle_detections').create(v => {
+                      v.challanRecord.set(record);
+                      v.vehicleIdentifier = `${detection.class}_${Math.floor(Math.random()*10000)}`;
+                      // If the backend returns a cropped thumbnail, save it here.
+                      v.thumbnailUri = detection.thumbnail_url || undefined;
+                      v.manualTags = []; // Ready for the user to fill out in ReviewDrawer
+                   });
+               }
+            }
+         });
+       }
+    } catch (e) {
+       console.error("Frame ping dropped:", e);
+    }
+  };
+
+  const lastFrameTime = useRef<number>(0);
+
   const frameProcessor = useFrameProcessor((frame) => {
     'worklet'
+    if (!currentActiveSessionId) return;
+
+    // Throttle to roughly 1 frame per second
+    const now = Date.now();
+    if (now - lastFrameTime.current < 1000) return;
+    lastFrameTime.current = now;
+
+    // NOTE: In a real environment, you would use a native plugin or logic
+    // to convert the frame to a JPEG buffer/URI here.
+    // We point to a bundled asset for testing so the RNFS file hash works.
+    const dummyFrameUri = 'dummy_frame.jpg'; // We'll handle resolution in fastPing
+
+    runOnJS(handleFastPing)(dummyFrameUri);
   }, []);
 
   const startRecording = useCallback(async () => {
@@ -88,35 +184,61 @@ export default function CaptureEngine() {
 
     if (camera.current) {
       setIsRecording(true);
+
+      // We generate the session ID immediately so the frame processor knows where to attach vehicles
+      const sessionId = `SESSION_${Date.now()}`;
+
+      // Create the draft record FIRST, so fast pings have a parent record to attach to.
+      let recordId = '';
+      await database.write(async () => {
+        const newRecord = await database.get<ChallanRecord>('challan_records').create(record => {
+          record.sessionId = sessionId;
+          record.status = 'DRAFT';
+          record.localVideoPath = 'RECORDING_IN_PROGRESS'; // Placeholder
+          record.videoHash = '';
+          record.manualTags = [];
+          record.systemTags = [];
+        });
+        recordId = newRecord.id;
+      });
+
+      currentActiveSessionId = recordId;
+
       camera.current.startRecording({
         onRecordingFinished: (video) => {
           setIsRecording(false);
+          currentActiveSessionId = null; // Stop frame processor tagging
           incrementDrafts();
-          console.log("Video captured:", video.path);
+          console.log("Raw Video captured:", video.path);
           (async () => {
             try {
+              console.log("Compressing video to save space...");
+              // Intelligent compression like WhatsApp HD
+              const compressedVideoPath = await Video.compress(
+                video.path,
+                {
+                  compressionMethod: 'auto',
+                  minimumFileSizeForCompress: 1, // Compress anything over 1MB
+                },
+                (progress) => {
+                  console.log('Compression Progress: ', progress);
+                }
+              );
+              console.log("Compression complete:", compressedVideoPath);
+
               const { sha256 } = await import('react-native-sha256');
               const RNFS = await import('react-native-fs');
-              const sessionId = `SESSION_${Date.now()}`;
 
-              const fileHash = await RNFS.hash(video.path, 'sha256');
+              // Hash the compressed video
+              const fileHash = await RNFS.hash(compressedVideoPath, 'sha256');
 
-              let recordId = '';
+              // Update the existing draft record with the final video path and hash
               await database.write(async () => {
-                const newRecord = await database.get<ChallanRecord>('challan_records').create(record => {
-                  record.sessionId = sessionId;
-                  record.status = 'DRAFT';
-                  record.localVideoPath = video.path;
-                  record.videoHash = fileHash;
-                  record.manualTags = [];
-                  record.systemTags = [];
+                const record = await database.get<ChallanRecord>('challan_records').find(recordId);
+                await record.update(r => {
+                  r.localVideoPath = compressedVideoPath;
+                  r.videoHash = fileHash;
                 });
-                recordId = newRecord.id;
-              });
-
-              // trigger sync in background
-              DualSyncService.uploadEvidence(recordId, officerId || 'OFFICER_MOCK').catch(err => {
-                console.error("Background Heavy Sync Failed:", err);
               });
 
             } catch (err) {
@@ -126,6 +248,7 @@ export default function CaptureEngine() {
         },
         onRecordingError: (error) => {
           setIsRecording(false);
+          currentActiveSessionId = null;
           console.error(error);
         },
       });
@@ -155,7 +278,22 @@ export default function CaptureEngine() {
 
       {/* ui overlay */}
       <View style={styles.overlay}>
-        <View style={styles.header}>
+        {/* GPS and Time Overlay Container */}
+        <View style={styles.topBar}>
+          <View style={styles.dataBadge}>
+            <Text style={styles.dataText}>
+              {currentTime.toLocaleDateString()} {currentTime.toLocaleTimeString()}
+            </Text>
+            {location ? (
+              <Text style={styles.dataText}>
+                LAT: {location.coords.latitude.toFixed(6)}  LON: {location.coords.longitude.toFixed(6)}
+              </Text>
+            ) : (
+              <Text style={styles.dataText}>Acquiring GPS Signal...</Text>
+            )}
+            <Text style={styles.dataText}>OFFICER ID: {officerId || '007'}</Text>
+          </View>
+
           <TouchableOpacity onPress={() => navigation.navigate('Review')}>
             <Text style={styles.draftText}>Drafts: {draftCount}/10</Text>
           </TouchableOpacity>
@@ -198,10 +336,29 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'space-between',
   },
-  header: {
+  topBar: {
     padding: 20,
-    paddingTop: 50,
-    alignItems: 'flex-end',
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  dataBadge: {
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    padding: 10,
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#ffcc00',
+  },
+  dataText: {
+    color: '#00FF00', // Hacker green for instrument panel feel
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    fontSize: 12,
+    fontWeight: 'bold',
+    marginBottom: 2,
+    textShadowColor: 'rgba(0,0,0,0.8)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
   draftText: {
     color: 'white',

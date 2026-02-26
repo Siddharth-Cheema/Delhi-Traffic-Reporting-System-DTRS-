@@ -1,6 +1,6 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { RecordingScreen } from '../screens/RecordingScreen';
+import CaptureEngine from '../components/CaptureEngine';
 import { DashboardScreen } from '../screens/DashboardScreen';
 import { LogScreen } from '../screens/LogScreen';
 import { LeaderboardScreen } from '../screens/LeaderboardScreen';
@@ -26,7 +26,7 @@ export function MainPager() {
       <Tab.Screen name="Logs" component={LogScreen} />
       <Tab.Screen
         name="Camera"
-        component={RecordingScreen}
+        component={CaptureEngine}
         options={{
           tabBarStyle: { display: 'none' } // Hide tab bar on camera screen for full screen
         }}
