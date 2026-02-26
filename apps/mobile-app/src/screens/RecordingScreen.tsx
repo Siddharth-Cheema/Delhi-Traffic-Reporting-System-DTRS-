@@ -2,20 +2,43 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, SafeAreaView, Alert } from 'react-native';
 import { Camera, useCameraDevice, useFrameProcessor } from 'react-native-vision-camera';
 import * as Location from 'expo-location';
+import { useNavigation } from '@react-navigation/native';
 import { database } from '../db';
 import { ChallanRecord } from '../db/models/ChallanRecord';
 import { DualSyncService } from '../services/DualSyncService';
 import { useCaptureStore } from '../store/useCaptureStore';
 import { useAuthStore } from '../store/useAuthStore';
+import { hashFile } from '../utils/hashFile';
 
 export function RecordingScreen() {
   const device = useCameraDevice('back');
   const camera = useRef<Camera>(null);
+  const navigation = useNavigation();
   const [isRecording, setIsRecording] = useState(false);
   const { incrementDrafts, isLockedOut } = useCaptureStore();
   const { officerId } = useAuthStore();
   const lastPingTime = useRef(0);
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Live recording timer
+  useEffect(() => {
+    if (isRecording) {
+      setRecordingSeconds(0);
+      timerRef.current = setInterval(() => {
+        setRecordingSeconds(prev => prev + 1);
+      }, 1000);
+    } else {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    }
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [isRecording]);
 
   useEffect(() => {
     (async () => {
@@ -41,7 +64,7 @@ export function RecordingScreen() {
     if (now - lastPingTime.current < 1000) return;
     lastPingTime.current = now;
 
-    // TODO: implement Skia frame extraction
+    // Skia frame extraction requires VisionCamera v4+ with Skia integration
   }, []);
 
   const startRecording = async () => {
@@ -58,8 +81,8 @@ export function RecordingScreen() {
             const sessionId = `SESSION_${Date.now()}`;
 
             try {
-              const RNFS = await import('react-native-fs');
-              const fileHash = await RNFS.hash(video.path, 'sha256');
+              // Hash the video using expo-crypto
+              const fileHash = await hashFile(video.path);
 
               // Store metadata locally
               let recordId = '';
@@ -135,11 +158,13 @@ export function RecordingScreen() {
             <Text style={styles.statusText}>4G - LIVE</Text>
           </View>
           <View style={styles.timerContainer}>
-            <View style={styles.dot} />
-            <Text style={styles.timerText}>00:00:30</Text>
+            <View style={[styles.dot, isRecording && { opacity: 1 }]} />
+            <Text style={styles.timerText}>
+              {String(Math.floor(recordingSeconds / 3600)).padStart(2, '0')}:{String(Math.floor((recordingSeconds % 3600) / 60)).padStart(2, '0')}:{String(recordingSeconds % 60).padStart(2, '0')}
+            </Text>
           </View>
-          <TouchableOpacity style={styles.closeButton}>
-             <Text style={styles.closeIcon}>✕</Text>
+          <TouchableOpacity style={styles.closeButton} onPress={() => navigation.goBack()}>
+            <Text style={styles.closeIcon}>✕</Text>
           </TouchableOpacity>
         </View>
 

@@ -29,9 +29,12 @@ export default function Home() {
             </svg>
           </Link>
 
-          <button className="flex h-14 items-center justify-center rounded-2xl border border-slate-800 bg-slate-900/50 px-8 text-sm font-bold uppercase tracking-widest text-slate-400 transition-all hover:border-slate-700 hover:bg-slate-800 hover:text-slate-200">
+          <Link
+            href="/arbitration"
+            className="flex h-14 items-center justify-center rounded-2xl border border-slate-800 bg-slate-900/50 px-8 text-sm font-bold uppercase tracking-widest text-slate-400 transition-all hover:border-slate-700 hover:bg-slate-800 hover:text-slate-200"
+          >
             System Analytics
-          </button>
+          </Link>
         </div>
       </main>
 

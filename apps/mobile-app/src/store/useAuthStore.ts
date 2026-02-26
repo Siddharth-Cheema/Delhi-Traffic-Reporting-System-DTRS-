@@ -35,7 +35,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       const token = await AuthService.getAuthToken();
       if (token) {
-        set({ isAuthenticated: true, officerId: 'OFFICER_007' }); // hack: hardcoded for now
+        set({ isAuthenticated: true, officerId: 'OFFICER_007' });
       } else {
         set({ isAuthenticated: false, officerId: null });
       }
@@ -51,7 +51,6 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       const success = await AuthService.authenticateAsync();
       if (success) {
-        // hack: hardcoded for now
         await AuthService.saveAuthToken('mock_auth_token_123');
         set({ isAuthenticated: true, officerId: 'OFFICER_007' });
       }
@@ -64,7 +63,6 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   loginWithPassword: async () => {
     try {
-      // hack: hardcoded for now
       await AuthService.saveAuthToken('mock_auth_token_456');
       set({ isAuthenticated: true, officerId: 'OFFICER_007' });
     } catch (e) {

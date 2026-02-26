@@ -6,6 +6,20 @@ import axios from 'axios'
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
+// resolve evidence file paths to browser-loadable URLs
+const toEvidenceUrl = (rawUrl: string | null | undefined): string | null => {
+  if (!rawUrl) return null;
+  // already a full URL
+  if (rawUrl.startsWith('http')) return rawUrl;
+  // local vault paths served via /evidence/
+  if (rawUrl.includes('dtms_vault/')) {
+    const filename = rawUrl.split('dtms_vault/').pop();
+    return `${API_BASE_URL}/evidence/${filename}`;
+  }
+  // s3:// would need pre-signed URL endpoint
+  return rawUrl;
+}
+
 // fetch live data
 const fetchTasks = async () => {
   const { data } = await axios.get(`${API_BASE_URL}/api/v1/arbitration/tasks`)
@@ -22,7 +36,7 @@ export default function ArbitrationPage() {
 
   const [selectedTask, setSelectedTask] = useState<any>(null)
   const [childException, setChildException] = useState(false)
-  const [notification, setNotification] = useState<{message: string, type: 'success' | 'error'} | null>(null)
+  const [notification, setNotification] = useState<{ message: string, type: 'success' | 'error' } | null>(null)
   const isProcessingRef = useRef(false)
   const lastActionTimeRef = useRef(0)
 
@@ -32,6 +46,7 @@ export default function ArbitrationPage() {
   const [isEditingViolation, setIsEditingViolation] = useState(false)
   const [editedViolation, setEditedViolation] = useState('')
   const [isVideoMode, setIsVideoMode] = useState(false)
+  const [reasonCode, setReasonCode] = useState('')
 
   // Update edit state when a new task is selected
   useEffect(() => {
@@ -41,14 +56,16 @@ export default function ArbitrationPage() {
       setIsEditingPlate(false)
       setIsEditingViolation(false)
       setIsVideoMode(false)
+      setReasonCode('')
     }
   }, [selectedTask])
 
   const mutation = useMutation({
-    mutationFn: (decisionData: { id: string, decision: string, childException: boolean, correctedPlate?: string, correctedViolation?: string }) => {
+    mutationFn: (decisionData: { id: string, decision: string, childException: boolean, reasonCode?: string, correctedPlate?: string, correctedViolation?: string }) => {
       return axios.post(`${API_BASE_URL}/api/v1/arbitration/decide/${decisionData.id}`, {
         decision: decisionData.decision,
         child_passenger_exception: decisionData.childException,
+        reason_code: decisionData.reasonCode || null,
         corrected_vehicle_number: decisionData.correctedPlate,
         corrected_violation: decisionData.correctedViolation
       })
@@ -60,6 +77,7 @@ export default function ArbitrationPage() {
       queryClient.invalidateQueries({ queryKey: ['arbitration-tasks'] })
       setSelectedTask(null)
       setChildException(false)
+      setReasonCode('')
 
       // show success notification
       const action = variables.decision === 'approve' ? 'Approved & Pushed to VAHAN' : 'Rejected & Saved to Training Vault';
@@ -106,6 +124,7 @@ export default function ArbitrationPage() {
       id: selectedTask.id,
       decision,
       childException,
+      reasonCode: decision === 'reject' ? reasonCode : undefined,
       correctedPlate: hasPlateChanged ? editedPlate : undefined,
       correctedViolation: hasViolationChanged ? editedViolation : undefined
     })
@@ -149,16 +168,16 @@ export default function ArbitrationPage() {
 
   const getStatusPill = (status: string) => {
     switch (status?.toLowerCase()) {
-      case 'pending':
-        return <span className="bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">Pending Submit</span>
-      case 'under_review':
-        return <span className="bg-blue-500/10 text-blue-400 border border-blue-500/20 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">Under Review</span>
-      case 'resolved':
-        return <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">Resolved</span>
+      case 'processing':
+        return <span className="bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">Processing</span>
+      case 'pending_review':
+        return <span className="bg-blue-500/10 text-blue-400 border border-blue-500/20 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">Pending Review</span>
+      case 'vahan_pushed':
+        return <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">Pushed to VAHAN</span>
       case 'rejected':
         return <span className="bg-red-500/10 text-red-400 border border-red-500/20 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">Rejected</span>
       default:
-        return <span className="bg-slate-500/10 text-slate-400 border border-slate-500/20 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">Unknown</span>
+        return <span className="bg-slate-500/10 text-slate-400 border border-slate-500/20 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">{status || 'Unknown'}</span>
     }
   }
 
@@ -244,12 +263,12 @@ export default function ArbitrationPage() {
                   </div>
                   <div className="flex justify-between items-end">
                     <div className="flex flex-col space-y-1">
-                       <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Violation Tag</span>
-                       <span className="text-sm font-bold text-red-400">{task.system_violation}</span>
+                      <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Violation Tag</span>
+                      <span className="text-sm font-bold text-red-400">{task.system_violation}</span>
                     </div>
                     <div className="text-right">
                       <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest block mb-1">System Confidence</span>
-                      <span className="text-xs font-mono text-slate-400">{( (task.system_confidence || 0) * 100 ).toFixed(0)}% CONF</span>
+                      <span className="text-xs font-mono text-slate-400">{((task.system_confidence || 0) * 100).toFixed(0)}% CONF</span>
                     </div>
                   </div>
                 </div>
@@ -266,20 +285,20 @@ export default function ArbitrationPage() {
             {/* top bar context */}
             <div className="bg-slate-900/40 backdrop-blur-md px-10 py-6 border-b border-slate-800/50 flex justify-between items-center">
               <div className="flex items-center space-x-10">
-                 <div className="flex flex-col">
-                    <span className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.2em] mb-1">Status</span>
-                    {getStatusPill('under_review')}
-                 </div>
-                 <div className="h-10 w-px bg-slate-800"></div>
-                 <div className="flex flex-col">
-                    <span className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.2em] mb-1">Location</span>
-                    <span className="text-sm font-semibold text-slate-200">{selectedTask.gps_lat || '28.6139'}, {selectedTask.gps_lng || '77.2090'}</span>
-                 </div>
-                 <div className="h-10 w-px bg-slate-800"></div>
-                 <div className="flex flex-col">
-                    <span className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.2em] mb-1">Temporal Stamp</span>
-                    <span className="text-sm font-semibold text-slate-200">{selectedTask.timestamp ? new Date(selectedTask.timestamp).toLocaleTimeString() : 'LIVE_EXTRACT'}</span>
-                 </div>
+                <div className="flex flex-col">
+                  <span className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.2em] mb-1">Status</span>
+                  {getStatusPill('under_review')}
+                </div>
+                <div className="h-10 w-px bg-slate-800"></div>
+                <div className="flex flex-col">
+                  <span className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.2em] mb-1">Location</span>
+                  <span className="text-sm font-semibold text-slate-200">{selectedTask.gps_lat || '28.6139'}, {selectedTask.gps_lng || '77.2090'}</span>
+                </div>
+                <div className="h-10 w-px bg-slate-800"></div>
+                <div className="flex flex-col">
+                  <span className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.2em] mb-1">Temporal Stamp</span>
+                  <span className="text-sm font-semibold text-slate-200">{selectedTask.timestamp ? new Date(selectedTask.timestamp).toLocaleTimeString() : 'LIVE_EXTRACT'}</span>
+                </div>
               </div>
 
               {hasConsensus && (
@@ -318,13 +337,13 @@ export default function ArbitrationPage() {
                   <div className="relative rounded-[1.8rem] overflow-hidden bg-black flex justify-center items-center aspect-video shadow-inner">
                     {isVideoMode && selectedTask.video_url ? (
                       <video
-                        src={selectedTask.video_url}
+                        src={toEvidenceUrl(selectedTask.video_url) || ''}
                         controls
                         autoPlay
                         className="w-full h-full object-cover"
                       />
-                    ) : selectedTask.evidence_image_url ? (
-                      <img src={selectedTask.evidence_image_url} alt="Evidence" className="w-full h-full object-cover" />
+                    ) : toEvidenceUrl(selectedTask.evidence_image_url) ? (
+                      <img src={toEvidenceUrl(selectedTask.evidence_image_url)!} alt="Evidence" className="w-full h-full object-cover" />
                     ) : (
                       <div className="flex flex-col items-center space-y-4">
                         <div className="w-12 h-12 border-4 border-slate-700 border-t-blue-500 rounded-full animate-spin"></div>
@@ -333,13 +352,32 @@ export default function ArbitrationPage() {
                     )}
 
                     {/* detection overlay - only show on image */}
-                    {!isVideoMode && (
-                      <svg className="absolute top-0 left-0 w-full h-full pointer-events-none" viewBox="0 0 800 600" preserveAspectRatio="none">
-                        <rect x="280" y="140" width="240" height="320" fill="rgba(59, 130, 246, 0.15)" stroke="#3b82f6" strokeWidth="4" rx="12" />
-                        <path d="M280 140 L340 140 L340 170 L280 170 Z" fill="#3b82f6" />
-                        <text x="286" y="160" fill="white" fontSize="12" fontWeight="bold" fontFamily="monospace">DET_{selectedTask.system_violation}</text>
-                      </svg>
-                    )}
+                    {!isVideoMode && selectedTask.bounding_boxes && (() => {
+                      try {
+                        const bboxes = typeof selectedTask.bounding_boxes === 'string'
+                          ? JSON.parse(selectedTask.bounding_boxes)
+                          : selectedTask.bounding_boxes;
+                        if (!Array.isArray(bboxes) || bboxes.length === 0) return null;
+                        return (
+                          <svg className="absolute top-0 left-0 w-full h-full pointer-events-none" viewBox="0 0 1 1" preserveAspectRatio="none">
+                            {bboxes.map((det: any, idx: number) => {
+                              const x = det.bbox?.x || 0;
+                              const y = det.bbox?.y || 0;
+                              const w = det.bbox?.w || 0;
+                              const h = det.bbox?.h || 0;
+                              const label = `${det.vehicle_class || 'DET'} ${((det.confidence || 0) * 100).toFixed(0)}%`;
+                              return (
+                                <g key={idx}>
+                                  <rect x={x} y={y} width={w} height={h} fill="rgba(59, 130, 246, 0.15)" stroke="#3b82f6" strokeWidth="0.005" rx="0.01" />
+                                  <rect x={x} y={y} width={Math.min(w, 0.15)} height="0.025" fill="#3b82f6" />
+                                  <text x={x + 0.005} y={y + 0.018} fill="white" fontSize="0.014" fontWeight="bold" fontFamily="monospace">{label}</text>
+                                </g>
+                              );
+                            })}
+                          </svg>
+                        );
+                      } catch { return null; }
+                    })()}
                   </div>
                 </div>
 
@@ -376,76 +414,76 @@ export default function ArbitrationPage() {
               {/* comparison matrix */}
               <div className="w-full max-w-5xl grid grid-cols-2 gap-8">
                 <div className="bg-slate-900/40 backdrop-blur-md border border-slate-800/50 rounded-3xl p-8 transition-all hover:border-slate-700/50">
-                   <div className="flex items-center space-x-3 mb-6">
-                      <div className="p-2 bg-indigo-500/20 rounded-xl text-indigo-400">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
-                      </div>
-                      <h3 className="text-sm font-bold uppercase tracking-[0.2em] text-indigo-400">Officer Intelligence</h3>
-                   </div>
-                   <div className="space-y-4">
-                      <div className="flex justify-between items-center py-3 border-b border-slate-800/50">
-                         <span className="text-slate-400 text-sm font-medium">Flagged Violation</span>
-                         <span className="text-slate-200 font-bold">{selectedTask.officer_violation || 'NONE'}</span>
-                      </div>
-                      <div className="flex justify-between items-center py-3 border-b border-slate-800/50">
-                         <span className="text-slate-400 text-sm font-medium">Officer ID</span>
-                         <span className="text-slate-200 font-mono text-sm uppercase">COP_4451</span>
-                      </div>
-                      <div className="flex justify-between items-center py-3">
-                         <span className="text-slate-400 text-sm font-medium">Field Confidence</span>
-                         <span className="text-slate-200 font-bold uppercase text-xs tracking-widest">High</span>
-                      </div>
-                   </div>
+                  <div className="flex items-center space-x-3 mb-6">
+                    <div className="p-2 bg-indigo-500/20 rounded-xl text-indigo-400">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                    </div>
+                    <h3 className="text-sm font-bold uppercase tracking-[0.2em] text-indigo-400">Officer Intelligence</h3>
+                  </div>
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center py-3 border-b border-slate-800/50">
+                      <span className="text-slate-400 text-sm font-medium">Flagged Violation</span>
+                      <span className="text-slate-200 font-bold">{selectedTask.officer_violation || 'NONE'}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-3 border-b border-slate-800/50">
+                      <span className="text-slate-400 text-sm font-medium">Officer ID</span>
+                      <span className="text-slate-200 font-mono text-sm uppercase">{selectedTask.officer_id || 'UNKNOWN'}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-3">
+                      <span className="text-slate-400 text-sm font-medium">Field Confidence</span>
+                      <span className="text-slate-200 font-bold uppercase text-xs tracking-widest">High</span>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="bg-slate-900/40 backdrop-blur-md border border-slate-800/50 rounded-3xl p-8 transition-all hover:border-slate-700/50 relative overflow-hidden">
-                   <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 blur-3xl rounded-full"></div>
-                   <div className="flex items-center space-x-3 mb-6">
-                      <div className="p-2 bg-blue-500/20 rounded-xl text-blue-400">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                      </div>
-                      <h3 className="text-sm font-bold uppercase tracking-[0.2em] text-blue-400">Automated Detection Pipeline</h3>
-                   </div>
-                   <div className="space-y-4">
-                      <div className="flex justify-between items-center py-3 border-b border-slate-800/50">
-                         <span className="text-slate-400 text-sm font-medium">Primary Detection</span>
-                         {isEditingViolation ? (
-                            <select
-                              value={editedViolation}
-                              onChange={(e) => setEditedViolation(e.target.value)}
-                              onBlur={() => setIsEditingViolation(false)}
-                              autoFocus
-                              className="bg-slate-950 border border-blue-500 text-sm font-bold text-white px-3 py-1 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                            >
-                              <option value="NO_HELMET">NO_HELMET</option>
-                              <option value="TRIPLE_RIDING">TRIPLE_RIDING</option>
-                              <option value="WRONG_SIDE">WRONG_SIDE</option>
-                              <option value="RED_LIGHT_JUMP">RED_LIGHT_JUMP</option>
-                              <option value="DEFECTIVE_NUMBER_PLATE">DEFECTIVE_NUMBER_PLATE</option>
-                              <option value="USE_OF_MOBILE">USE_OF_MOBILE</option>
-                              <option value="OVERSPEEDING">OVERSPEEDING</option>
-                            </select>
-                         ) : (
-                           <div
-                              onClick={() => setIsEditingViolation(true)}
-                              className="group flex items-center space-x-2 cursor-pointer"
-                           >
-                              <span className={`font-bold ${editedViolation !== selectedTask.system_violation ? 'text-yellow-400' : (hasConsensus ? 'text-emerald-400' : 'text-blue-400')}`}>
-                                {editedViolation}
-                              </span>
-                              <svg className="w-3 h-3 text-slate-600 group-hover:text-blue-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
-                           </div>
-                         )}
-                      </div>
-                      <div className="flex justify-between items-center py-3 border-b border-slate-800/50">
-                         <span className="text-slate-400 text-sm font-medium">Probability Score</span>
-                         <span className="text-slate-200 font-mono text-sm">{( (selectedTask.system_confidence || 0) * 100 ).toFixed(1)}%</span>
-                      </div>
-                      <div className="flex justify-between items-center py-3">
-                         <span className="text-slate-400 text-sm font-medium">Detection Engine</span>
-                         <span className="text-slate-500 font-mono text-[10px] uppercase tracking-widest">YOLOv11-Nano-Quant</span>
-                      </div>
-                   </div>
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 blur-3xl rounded-full"></div>
+                  <div className="flex items-center space-x-3 mb-6">
+                    <div className="p-2 bg-blue-500/20 rounded-xl text-blue-400">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                    </div>
+                    <h3 className="text-sm font-bold uppercase tracking-[0.2em] text-blue-400">Automated Detection Pipeline</h3>
+                  </div>
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center py-3 border-b border-slate-800/50">
+                      <span className="text-slate-400 text-sm font-medium">Primary Detection</span>
+                      {isEditingViolation ? (
+                        <select
+                          value={editedViolation}
+                          onChange={(e) => setEditedViolation(e.target.value)}
+                          onBlur={() => setIsEditingViolation(false)}
+                          autoFocus
+                          className="bg-slate-950 border border-blue-500 text-sm font-bold text-white px-3 py-1 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                        >
+                          <option value="NO_HELMET">NO_HELMET</option>
+                          <option value="TRIPLE_RIDING">TRIPLE_RIDING</option>
+                          <option value="WRONG_SIDE">WRONG_SIDE</option>
+                          <option value="RED_LIGHT_JUMP">RED_LIGHT_JUMP</option>
+                          <option value="DEFECTIVE_NUMBER_PLATE">DEFECTIVE_NUMBER_PLATE</option>
+                          <option value="USE_OF_MOBILE">USE_OF_MOBILE</option>
+                          <option value="OVERSPEEDING">OVERSPEEDING</option>
+                        </select>
+                      ) : (
+                        <div
+                          onClick={() => setIsEditingViolation(true)}
+                          className="group flex items-center space-x-2 cursor-pointer"
+                        >
+                          <span className={`font-bold ${editedViolation !== selectedTask.system_violation ? 'text-yellow-400' : (hasConsensus ? 'text-emerald-400' : 'text-blue-400')}`}>
+                            {editedViolation}
+                          </span>
+                          <svg className="w-3 h-3 text-slate-600 group-hover:text-blue-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex justify-between items-center py-3 border-b border-slate-800/50">
+                      <span className="text-slate-400 text-sm font-medium">Probability Score</span>
+                      <span className="text-slate-200 font-mono text-sm">{((selectedTask.system_confidence || 0) * 100).toFixed(1)}%</span>
+                    </div>
+                    <div className="flex justify-between items-center py-3">
+                      <span className="text-slate-400 text-sm font-medium">Detection Engine</span>
+                      <span className="text-slate-500 font-mono text-[10px] uppercase tracking-widest">YOLOv11-Nano-Quant</span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -473,16 +511,31 @@ export default function ArbitrationPage() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-6">
-                  <button
-                    onClick={() => handleDecision('reject')}
-                    disabled={mutation.isPending || isProcessingRef.current}
-                    className="group relative overflow-hidden bg-slate-800 text-slate-300 font-bold py-6 rounded-2xl border border-slate-700 transition-all hover:bg-red-500/10 hover:border-red-500/50 hover:text-red-400 disabled:opacity-50"
-                  >
-                    <div className="flex items-center justify-center space-x-3 relative z-10">
-                      <span className="text-xl group-hover:scale-125 transition-transform duration-300">✕</span>
-                      <span className="uppercase tracking-[0.2em] text-xs">Reject & Vault (R)</span>
-                    </div>
-                  </button>
+                  <div className="space-y-3">
+                    <select
+                      value={reasonCode}
+                      onChange={(e) => setReasonCode(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-700 text-sm font-medium text-slate-300 px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500"
+                    >
+                      <option value="">Select Rejection Reason (Optional)</option>
+                      <option value="FALSE_POSITIVE">False Positive — No Violation Present</option>
+                      <option value="OCCLUSION">Occlusion — Vehicle/Plate Obstructed</option>
+                      <option value="WRONG_VEHICLE">Wrong Vehicle — Detection Mismatch</option>
+                      <option value="POOR_QUALITY">Poor Quality — Unusable Evidence</option>
+                      <option value="DUPLICATE">Duplicate — Already Processed</option>
+                      <option value="CHILD_EXCEPTION">Child Passenger Exception</option>
+                    </select>
+                    <button
+                      onClick={() => handleDecision('reject')}
+                      disabled={mutation.isPending || isProcessingRef.current}
+                      className="group relative overflow-hidden w-full bg-slate-800 text-slate-300 font-bold py-6 rounded-2xl border border-slate-700 transition-all hover:bg-red-500/10 hover:border-red-500/50 hover:text-red-400 disabled:opacity-50"
+                    >
+                      <div className="flex items-center justify-center space-x-3 relative z-10">
+                        <span className="text-xl group-hover:scale-125 transition-transform duration-300">✕</span>
+                        <span className="uppercase tracking-[0.2em] text-xs">Reject & Vault (R)</span>
+                      </div>
+                    </button>
+                  </div>
 
                   <button
                     onClick={() => handleDecision('approve')}

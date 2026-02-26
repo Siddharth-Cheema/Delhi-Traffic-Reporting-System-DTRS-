@@ -1,7 +1,33 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ScrollView } from 'react-native';
+import { database } from '../db';
+import { ChallanRecord } from '../db/models/ChallanRecord';
 
 export function DashboardScreen() {
+  const [totalReports, setTotalReports] = useState(0);
+  const [pendingSync, setPendingSync] = useState(0);
+  const [uploadedCount, setUploadedCount] = useState(0);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const records = await database.get<ChallanRecord>('challan_records').query().fetch();
+        setTotalReports(records.length);
+        setPendingSync(records.filter(r => r.status === 'DRAFT' || r.status === 'SYNCING').length);
+        setUploadedCount(records.filter(r => r.status === 'UPLOADED').length);
+      } catch (error) {
+        console.error("Failed to fetch stats:", error);
+      }
+    };
+
+    fetchStats();
+    // Re-fetch every 5 seconds to keep stats fresh
+    const interval = setInterval(fetchStats, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const accuracy = totalReports > 0 ? Math.round((uploadedCount / totalReports) * 100) : 0;
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
@@ -11,20 +37,20 @@ export function DashboardScreen() {
 
         <View style={styles.statsGrid}>
           <View style={styles.statCard}>
-            <Text style={styles.statValue}>142</Text>
+            <Text style={styles.statValue}>{totalReports}</Text>
             <Text style={styles.statLabel}>Total Reports</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={styles.statValue}>12</Text>
+            <Text style={styles.statValue}>{pendingSync}</Text>
             <Text style={styles.statLabel}>Pending Sync</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={styles.statValue}>89%</Text>
-            <Text style={styles.statLabel}>Accuracy</Text>
+            <Text style={styles.statValue}>{accuracy}%</Text>
+            <Text style={styles.statLabel}>Upload Rate</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={styles.statValue}>Rank 4</Text>
-            <Text style={styles.statLabel}>Zone Rank</Text>
+            <Text style={styles.statValue}>{uploadedCount}</Text>
+            <Text style={styles.statLabel}>Uploaded</Text>
           </View>
         </View>
       </ScrollView>

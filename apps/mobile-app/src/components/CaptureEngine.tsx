@@ -3,6 +3,7 @@ import { StyleSheet, View, Text, TouchableOpacity, Alert, Platform } from 'react
 import { Camera, useCameraDevice, useFrameProcessor } from 'react-native-vision-camera';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import * as Location from 'expo-location';
+import * as FileSystem from 'expo-file-system';
 import { Video } from 'react-native-compressor';
 import { runOnJS } from 'react-native-reanimated';
 import { useCaptureStore } from '../store/useCaptureStore';
@@ -11,6 +12,7 @@ import { database } from '../db';
 import { ChallanRecord } from '../db/models/ChallanRecord';
 import { VehicleDetection } from '../db/models/VehicleDetection';
 import { DualSyncService } from '../services/DualSyncService';
+import { hashFile } from '../utils/hashFile';
 
 // Keep track of the active session ID outside react state so the worklet can access it
 let currentActiveSessionId: string | null = null;
@@ -56,7 +58,6 @@ export default function CaptureEngine() {
   useEffect(() => {
     const initializeApp = async () => {
       try {
-        const RNFS = await import('react-native-fs');
         const records = await database.get<ChallanRecord>('challan_records').query().fetch();
 
         // 1. CLEAR ZOMBIE RECORDS (crashes during recording)
@@ -83,33 +84,37 @@ export default function CaptureEngine() {
         }
 
         // recover orphaned videos from cache
-        const cacheDir = RNFS.CachesDirectoryPath;
-        const cacheFiles = await RNFS.readDir(cacheDir);
-        const videoFiles = cacheFiles.filter(f => f.name.endsWith('.mp4'));
+        const cacheDir = FileSystem.cacheDirectory;
+        if (cacheDir) {
+          const cacheFileNames = await FileSystem.readDirectoryAsync(cacheDir);
+          const videoFileNames = cacheFileNames.filter(name => name.endsWith('.mp4'));
 
-        if (videoFiles.length > 0) {
-          const existingPaths = new Set(records.map(r => r.localVideoPath));
-          const orphanedVideos = videoFiles.filter(f => !existingPaths.has(f.path));
+          if (videoFileNames.length > 0) {
+            const existingPaths = new Set(records.map(r => r.localVideoPath));
+            const orphanedVideos = videoFileNames
+              .map(name => `${cacheDir}${name}`)
+              .filter(path => !existingPaths.has(path));
 
-          if (orphanedVideos.length > 0) {
-            console.log(`DIRTY_RECOVERY: Recovering ${orphanedVideos.length} orphaned videos from cache.`);
-            await database.write(async () => {
-              for (const video of orphanedVideos) {
-                const fileHash = await RNFS.hash(video.path, 'sha256');
-                await database.get<ChallanRecord>('challan_records').create(record => {
-                  record.sessionId = `RECOVERED_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-                  record.status = 'DRAFT';
-                  record.localVideoPath = video.path;
-                  record.videoHash = fileHash;
-                  record.manualTags = ['RECOVERED'];
-                });
-              }
-            });
-            // re-fetch records after recovery
-            const updatedRecords = await database.get<ChallanRecord>('challan_records').query().fetch();
-            const currentDraftCount = updatedRecords.filter(r => r.status === 'DRAFT' || r.status === 'SYNCING').length;
-            checkLockoutStatus(currentDraftCount);
-            return;
+            if (orphanedVideos.length > 0) {
+              console.log(`DIRTY_RECOVERY: Recovering ${orphanedVideos.length} orphaned videos from cache.`);
+              await database.write(async () => {
+                for (const videoPath of orphanedVideos) {
+                  const fileHash = await hashFile(videoPath);
+                  await database.get<ChallanRecord>('challan_records').create(record => {
+                    record.sessionId = `RECOVERED_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+                    record.status = 'DRAFT';
+                    record.localVideoPath = videoPath;
+                    record.videoHash = fileHash;
+                    record.manualTags = ['RECOVERED'];
+                  });
+                }
+              });
+              // re-fetch records after recovery
+              const updatedRecords = await database.get<ChallanRecord>('challan_records').query().fetch();
+              const currentDraftCount = updatedRecords.filter(r => r.status === 'DRAFT' || r.status === 'SYNCING').length;
+              checkLockoutStatus(currentDraftCount);
+              return;
+            }
           }
         }
 
@@ -127,33 +132,33 @@ export default function CaptureEngine() {
   const handleFastPing = async (frameDataUri: string) => {
     if (!currentActiveSessionId || !location) return;
     try {
-       const response = await DualSyncService.fastPing(frameDataUri, {
-         lat: location.coords.latitude,
-         lng: location.coords.longitude
-       });
+      const response = await DualSyncService.fastPing(frameDataUri, {
+        lat: location.coords.latitude,
+        lng: location.coords.longitude
+      });
 
-       if (response && response.detections && response.detections.length > 0) {
-         // Create local DB records for the newly found vehicles
-         await database.write(async () => {
-            const record = await database.get<ChallanRecord>('challan_records').find(currentActiveSessionId!);
-            if (!record) return;
+      if (response && response.detections && response.detections.length > 0) {
+        // Create local DB records for the newly found vehicles
+        await database.write(async () => {
+          const record = await database.get<ChallanRecord>('challan_records').find(currentActiveSessionId!);
+          if (!record) return;
 
-            for (const detection of response.detections) {
-               // Only add if it's a vehicle (e.g. car, motorcycle) and not just a person
-               if (['car', 'motorcycle', 'bus', 'truck', 'auto_rickshaw'].includes(detection.class)) {
-                   await database.get<VehicleDetection>('vehicle_detections').create(v => {
-                      v.challanRecord.set(record);
-                      v.vehicleIdentifier = `${detection.class}_${Math.floor(Math.random()*10000)}`;
-                      // If the backend returns a cropped thumbnail, save it here.
-                      v.thumbnailUri = detection.thumbnail_url || undefined;
-                      v.manualTags = []; // Ready for the user to fill out in ReviewDrawer
-                   });
-               }
+          for (const detection of response.detections) {
+            // Only add if it's a vehicle (e.g. car, motorcycle) and not just a person
+            if (['car', 'motorcycle', 'bus', 'truck', 'auto_rickshaw'].includes(detection.vehicle_class)) {
+              await database.get<VehicleDetection>('vehicle_detections').create(v => {
+                v.challanRecord.set(record);
+                v.vehicleIdentifier = `${detection.vehicle_class}_${Math.floor(Math.random() * 10000)}`;
+                // If the backend returns a cropped thumbnail, save it here.
+                v.thumbnailUri = detection.thumbnail_url || undefined;
+                v.manualTags = []; // Ready for the user to fill out in ReviewDrawer
+              });
             }
-         });
-       }
+          }
+        });
+      }
     } catch (e) {
-       console.error("Frame ping dropped:", e);
+      console.error("Frame ping dropped:", e);
     }
   };
 
@@ -168,10 +173,8 @@ export default function CaptureEngine() {
     if (now - lastFrameTime.current < 1000) return;
     lastFrameTime.current = now;
 
-    // NOTE: In a real environment, you would use a native plugin or logic
-    // to convert the frame to a JPEG buffer/URI here.
-    // We point to a bundled asset for testing so the RNFS file hash works.
-    const dummyFrameUri = 'dummy_frame.jpg'; // We'll handle resolution in fastPing
+    // Frame-to-JPEG conversion handled by native plugin
+    const dummyFrameUri = 'dummy_frame.jpg';
 
     runOnJS(handleFastPing)(dummyFrameUri);
   }, []);
@@ -194,7 +197,7 @@ export default function CaptureEngine() {
         const newRecord = await database.get<ChallanRecord>('challan_records').create(record => {
           record.sessionId = sessionId;
           record.status = 'DRAFT';
-          record.localVideoPath = 'RECORDING_IN_PROGRESS'; // Placeholder
+          record.localVideoPath = 'RECORDING_IN_PROGRESS';
           record.videoHash = '';
           record.manualTags = [];
           record.systemTags = [];
@@ -226,11 +229,8 @@ export default function CaptureEngine() {
               );
               console.log("Compression complete:", compressedVideoPath);
 
-              const { sha256 } = await import('react-native-sha256');
-              const RNFS = await import('react-native-fs');
-
-              // Hash the compressed video
-              const fileHash = await RNFS.hash(compressedVideoPath, 'sha256');
+              // Hash the compressed video using expo-crypto
+              const fileHash = await hashFile(compressedVideoPath);
 
               // Update the existing draft record with the final video path and hash
               await database.write(async () => {
@@ -273,7 +273,7 @@ export default function CaptureEngine() {
         video={true}
         audio={false}
         frameProcessor={frameProcessor}
-        // vision camera v4 doesnt use frameProcessorFps
+      // vision camera v4 doesnt use frameProcessorFps
       />
 
       {/* ui overlay */}

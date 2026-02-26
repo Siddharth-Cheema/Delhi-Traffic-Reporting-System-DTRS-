@@ -3,6 +3,7 @@ import { database } from '../db';
 import { ChallanRecord } from '../db/models/ChallanRecord';
 import NetInfo from '@react-native-community/netinfo';
 import { Alert } from 'react-native';
+import { hashFile } from '../utils/hashFile';
 
 export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -11,25 +12,22 @@ export class DualSyncService {
   // sync fast pings (foreground/4G)
   static async fastPing(imageUri: string, gps: { lat: number, lng: number }) {
     try {
-      const RNFS = await import('react-native-fs');
-
-      // bypass hashing if it's the dummy frame to avoid crash
+      // skip hashing for placeholder frames
       let frameHash = 'dummy_hash';
       if (!imageUri.includes('dummy_frame')) {
-        frameHash = await RNFS.hash(imageUri, 'sha256');
+        frameHash = await hashFile(imageUri);
       }
 
       const formData = new FormData();
       // Only append image if we actually have one (in a real scenario)
       if (!imageUri.includes('dummy_frame')) {
-          formData.append('image', {
-            uri: imageUri,
-            name: 'frame.jpg',
-            type: 'image/jpeg'
-          } as any);
+        formData.append('image', {
+          uri: imageUri,
+          name: 'frame.jpg',
+          type: 'image/jpeg'
+        } as any);
       } else {
-          // If testing with dummy frame, backend might fail if 'image' is required
-          // In a real device environment, this should be a valid JPEG path
+        // frame placeholder path — requires valid JPEG on device
       }
 
       formData.append('gps_lat', gps.lat.toString());
@@ -44,7 +42,7 @@ export class DualSyncService {
       return response.data;
     } catch (error) {
       console.error("Fast Ping Failed:", error);
-      // hack: return empty detections instead of failing to not block UI
+      // return empty detections on failure to keep UI responsive
       return { detections: [], _error: 'fast_ping_failed' };
     }
   }
@@ -56,8 +54,8 @@ export class DualSyncService {
       // For heavy video uploads, ideally we want Wi-Fi or strong cellular.
       // If no connection, fail fast so it remains a DRAFT.
       if (!netState.isConnected) {
-         Alert.alert('No Network', 'Please connect to the internet to upload evidence.');
-         throw new Error('No internet connection for heavy sync');
+        Alert.alert('No Network', 'Please connect to the internet to upload evidence.');
+        throw new Error('No internet connection for heavy sync');
       }
 
       // If user prefers WiFi only (mock check, but here is where settings integration goes)

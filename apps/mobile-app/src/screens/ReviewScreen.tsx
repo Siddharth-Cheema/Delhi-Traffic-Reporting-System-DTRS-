@@ -7,123 +7,202 @@ import {
   SafeAreaView,
   ScrollView,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { database } from '../db';
 import { ChallanRecord } from '../db/models/ChallanRecord';
+import { DualSyncService } from '../services/DualSyncService';
+import { useAuthStore } from '../store/useAuthStore';
 
 export function ReviewScreen() {
-  const [latestRecord, setLatestRecord] = useState<ChallanRecord | null>(null);
+  const navigation = useNavigation();
+  const { officerId } = useAuthStore();
+  const [records, setRecords] = useState<ChallanRecord[]>([]);
+  const [selectedRecord, setSelectedRecord] = useState<ChallanRecord | null>(null);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+
+  const fetchRecords = async () => {
+    try {
+      const allRecords = await database.get<ChallanRecord>('challan_records')
+        .query()
+        .fetch();
+      // Show DRAFT and SYNCING records (actionable), then UPLOADED at the bottom
+      const sorted = allRecords.sort((a, b) => {
+        const statusOrder: Record<string, number> = { 'DRAFT': 0, 'SYNCING': 1, 'UPLOADED': 2 };
+        return (statusOrder[a.status] ?? 3) - (statusOrder[b.status] ?? 3);
+      });
+      setRecords(sorted);
+      // Auto-select first record if none selected
+      if (!selectedRecord && sorted.length > 0) {
+        setSelectedRecord(sorted[0]);
+      }
+    } catch (error) {
+      console.error("Failed to fetch records:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchLatest = async () => {
-      try {
-        const records = await database.get<ChallanRecord>('challan_records')
-          .query()
-          .fetch();
-
-        if (records.length > 0) {
-          // hack: grab latest for now
-          setLatestRecord(records[records.length - 1]);
-        }
-      } catch (error) {
-        console.error("Failed to fetch latest record:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchLatest();
+    fetchRecords();
   }, []);
 
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <ActivityIndicator size="large" color="#001F3F" style={{ flex: 1 }} />
+        <ActivityIndicator size="large" color="#34C759" style={{ flex: 1 }} />
       </SafeAreaView>
     );
   }
 
-  const displayDate = latestRecord
-    ? new Date(latestRecord.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
-    : '20 Feb 2024';
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'DRAFT': return '#FFD60A';
+      case 'SYNCING': return '#007AFF';
+      case 'UPLOADED': return '#34C759';
+      default: return '#9CA3AF';
+    }
+  };
 
-  const displayTime = latestRecord
-    ? new Date(latestRecord.createdAt).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true })
-    : '5:34 pm';
+  const formatDate = (date: Date) =>
+    new Date(date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+
+  const formatTime = (date: Date) =>
+    new Date(date).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true });
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton}>
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Text style={styles.backIcon}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Review Report</Text>
+        <Text style={styles.headerTitle}>Review Queue ({records.filter(r => r.status === 'DRAFT').length} pending)</Text>
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.thumbnailPlaceholder}>
-          <Text style={styles.thumbnailText}>
-            {latestRecord ? `Frame for ...${latestRecord.sessionId.slice(-6)}` : '1-FPS Frame Placeholder'}
-          </Text>
+      {records.length === 0 ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <Text style={styles.placeholderText}>No records yet. Start capturing!</Text>
         </View>
-
-        <View style={styles.metaContainer}>
-          <View style={styles.metaItem}>
-            <Text style={styles.metaLabel}>Date</Text>
-            <Text style={styles.metaValue}>{displayDate}</Text>
-          </View>
-          <View style={styles.metaItem}>
-            <Text style={styles.metaLabel}>Time</Text>
-            <Text style={styles.metaValue}>{displayTime}</Text>
-          </View>
-          <View style={styles.metaItem}>
-            <Text style={styles.metaLabel}>Location</Text>
-            <Text style={styles.metaValue}>
-              {latestRecord?.gpsLat ? `${latestRecord.gpsLat.toFixed(4)}, ${latestRecord.gpsLng?.toFixed(4)}` : 'Connaught Place, Delhi'}
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.violationSection}>
-          <Text style={styles.sectionTitle}>Automated System Detections</Text>
-          <View style={styles.tagContainer}>
-            {latestRecord && latestRecord.systemTags && latestRecord.systemTags.length > 0 ? (
-              latestRecord.systemTags.map(tag => (
-                <View key={tag} style={[styles.tag, styles.systemTag]}>
-                  <Text style={[styles.tagText, styles.systemTagText]}>{tag.replace(/_/g, ' ')}</Text>
+      ) : (
+        <View style={{ flex: 1, flexDirection: 'row' }}>
+          {/* Left panel: record list */}
+          <ScrollView style={styles.listPanel}>
+            {records.map((record) => (
+              <TouchableOpacity
+                key={record.id}
+                style={[
+                  styles.listItem,
+                  selectedRecord?.id === record.id && styles.listItemSelected
+                ]}
+                onPress={() => setSelectedRecord(record)}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <View style={[styles.statusDot, { backgroundColor: getStatusColor(record.status) }]} />
+                  <Text style={styles.listItemTitle} numberOfLines={1}>
+                    ...{record.sessionId.slice(-8)}
+                  </Text>
                 </View>
-              ))
-            ) : (
-              <Text style={styles.placeholderText}>Processing detections...</Text>
-            )}
-          </View>
-        </View>
+                <Text style={styles.listItemMeta}>{record.status} · {formatDate(record.createdAt)}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
 
-        <View style={styles.violationSection}>
-          <Text style={styles.sectionTitle}>Manual Tags (Officer)</Text>
-          <View style={styles.tagContainer}>
-            {latestRecord && latestRecord.manualTags && latestRecord.manualTags.length > 0 ? (
-              latestRecord.manualTags.map(tag => (
-                <View key={tag} style={styles.tag}>
-                  <Text style={styles.tagText}>{tag.replace(/_/g, ' ')}</Text>
+          {/* Right panel: selected record details */}
+          <ScrollView contentContainerStyle={styles.detailPanel}>
+            {selectedRecord ? (
+              <>
+                <View style={styles.thumbnailPlaceholder}>
+                  <Text style={styles.thumbnailText}>
+                    Frame for ...{selectedRecord.sessionId.slice(-6)}
+                  </Text>
                 </View>
-              ))
+
+                <View style={styles.metaContainer}>
+                  <View style={styles.metaItem}>
+                    <Text style={styles.metaLabel}>Date</Text>
+                    <Text style={styles.metaValue}>{formatDate(selectedRecord.createdAt)}</Text>
+                  </View>
+                  <View style={styles.metaItem}>
+                    <Text style={styles.metaLabel}>Time</Text>
+                    <Text style={styles.metaValue}>{formatTime(selectedRecord.createdAt)}</Text>
+                  </View>
+                  <View style={styles.metaItem}>
+                    <Text style={styles.metaLabel}>Location</Text>
+                    <Text style={styles.metaValue}>
+                      {selectedRecord.gpsLat ? `${selectedRecord.gpsLat.toFixed(4)}, ${selectedRecord.gpsLng?.toFixed(4)}` : 'GPS unavailable'}
+                    </Text>
+                  </View>
+                  <View style={[styles.metaItem, { borderBottomWidth: 0 }]}>
+                    <Text style={styles.metaLabel}>Status</Text>
+                    <Text style={[styles.metaValue, { color: getStatusColor(selectedRecord.status) }]}>
+                      {selectedRecord.status}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.violationSection}>
+                  <Text style={styles.sectionTitle}>System Detections</Text>
+                  <View style={styles.tagContainer}>
+                    {selectedRecord.systemTags?.length > 0 ? (
+                      selectedRecord.systemTags.map(tag => (
+                        <View key={tag} style={[styles.tag, styles.systemTag]}>
+                          <Text style={[styles.tagText, styles.systemTagText]}>{tag.replace(/_/g, ' ')}</Text>
+                        </View>
+                      ))
+                    ) : (
+                      <Text style={styles.placeholderText}>Processing detections...</Text>
+                    )}
+                  </View>
+                </View>
+
+                <View style={styles.violationSection}>
+                  <Text style={styles.sectionTitle}>Manual Tags (Officer)</Text>
+                  <View style={styles.tagContainer}>
+                    {selectedRecord.manualTags?.length > 0 ? (
+                      selectedRecord.manualTags.map(tag => (
+                        <View key={tag} style={styles.tag}>
+                          <Text style={styles.tagText}>{tag.replace(/_/g, ' ')}</Text>
+                        </View>
+                      ))
+                    ) : (
+                      <Text style={styles.placeholderText}>No manual tags added yet.</Text>
+                    )}
+                  </View>
+                </View>
+              </>
             ) : (
-              <Text style={styles.placeholderText}>No manual tags added yet.</Text>
+              <Text style={styles.placeholderText}>Select a record from the list</Text>
             )}
-          </View>
+          </ScrollView>
         </View>
-      </ScrollView>
+      )}
 
       <View style={styles.footer}>
         <TouchableOpacity
-          style={[styles.saveButton, (!latestRecord || latestRecord.status === 'UPLOADED') && styles.disabledButton]}
-          disabled={!latestRecord || latestRecord.status === 'UPLOADED'}
+          style={[styles.saveButton, (!selectedRecord || selectedRecord.status === 'UPLOADED' || submitting) && styles.disabledButton]}
+          disabled={!selectedRecord || selectedRecord.status === 'UPLOADED' || submitting}
+          onPress={async () => {
+            if (!selectedRecord) return;
+            setSubmitting(true);
+            try {
+              await DualSyncService.uploadEvidence(selectedRecord.id, officerId || 'OFFICER_MOCK');
+              Alert.alert('Success', 'Report submitted successfully!');
+              await fetchRecords();
+              // Update selected record
+              const updated = await database.get<ChallanRecord>('challan_records').find(selectedRecord.id);
+              setSelectedRecord(updated);
+            } catch (err) {
+              Alert.alert('Upload Failed', 'Please try again when connected.');
+            } finally {
+              setSubmitting(false);
+            }
+          }}
         >
           <Text style={styles.saveButtonText}>
-            {latestRecord?.status === 'UPLOADED' ? 'Report Submitted' : 'Submit Report'}
+            {submitting ? 'Submitting...' : selectedRecord?.status === 'UPLOADED' ? 'Already Submitted' : 'Submit Selected Report'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -163,6 +242,42 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: '#FFF',
     fontWeight: '600',
+  },
+  listPanel: {
+    width: '35%',
+    borderRightWidth: 1,
+    borderRightColor: 'rgba(255,255,255,0.1)',
+  },
+  listItem: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.05)',
+  },
+  listItemSelected: {
+    backgroundColor: 'rgba(52,199,89,0.1)',
+    borderLeftWidth: 3,
+    borderLeftColor: '#34C759',
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  listItemTitle: {
+    color: '#FFF',
+    fontSize: 13,
+    fontWeight: '600',
+    fontFamily: 'monospace',
+  },
+  listItemMeta: {
+    color: '#9CA3AF',
+    fontSize: 11,
+    marginTop: 4,
+    fontWeight: '500',
+  },
+  detailPanel: {
+    flex: 1,
+    padding: 20,
   },
   content: {
     padding: 20,
