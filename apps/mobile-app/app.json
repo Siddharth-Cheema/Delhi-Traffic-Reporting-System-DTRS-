@@ -13,7 +13,11 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "DTRS needs access to your camera to report traffic violations.",
+        "NSMicrophoneUsageDescription": "Allow $(PRODUCT_NAME) to access your microphone"
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -26,10 +30,20 @@
       "permissions": [
         "ACCESS_COARSE_LOCATION",
         "ACCESS_FINE_LOCATION",
-        "FOREGROUND_SERVICE"
+        "FOREGROUND_SERVICE",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
       ]
     },
     "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 26
+          }
+        }
+      ],
       [
         "react-native-vision-camera",
         {
@@ -43,10 +57,17 @@
           "locationAlwaysPermission": "Allow DTRS to use your location to geotag traffic violation evidence."
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      "@morrowdigital/watermelondb-expo-plugin"
     ],
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "e2e58675-6539-4e92-961f-c4d4fbe3a48e"
+      }
+    },
+    "owner": "siddharth-cheema"
   }
 }
