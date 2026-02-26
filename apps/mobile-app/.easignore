@@ -1,0 +1,7 @@
+# .easignore
+# This file is used to tell EAS Build what NOT to ignore.
+# By default, EAS ignores everything in .gitignore.
+# We explicitly allow the assets folder to ensure icons are sent to the cloud.
+
+!assets/
+!assets/*
