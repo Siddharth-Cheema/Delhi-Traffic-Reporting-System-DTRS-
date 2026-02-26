@@ -9,7 +9,7 @@ import { VehicleDetection } from './models/VehicleDetection';
 const adapter = new SQLiteAdapter({
   schema,
   dbName: 'dtrs_db',
-  jsi: true,
+  jsi: false, // Turned off JSI due to RN 0.74 compilation issues
   onSetUpError: (error) => {
     console.error('WatermelonDB setup error:', error);
   },

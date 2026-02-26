@@ -57,8 +57,7 @@
           "locationAlwaysPermission": "Allow DTRS to use your location to geotag traffic violation evidence."
         }
       ],
-      "expo-secure-store",
-      "@morrowdigital/watermelondb-expo-plugin"
+      "expo-secure-store"
     ],
     "web": {
       "favicon": "./assets/favicon.png"
