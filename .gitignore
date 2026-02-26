@@ -7,8 +7,6 @@ __pycache__/
 *.db
 *.log
 *.mp4
-*.jpg
-*.png
 .env
 .env.local
 apps/api-service/dtms_vault/
