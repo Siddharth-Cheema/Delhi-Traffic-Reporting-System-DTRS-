@@ -1,7 +1,7 @@
 import https from 'https';
 import fs from 'fs';
 
-const token = 'process.env.FIGMA_TOKEN || 'YOUR_FIGMA_TOKEN_HERE'';
+const token = process.env.FIGMA_TOKEN || 'YOUR_FIGMA_TOKEN_HERE';
 const fileId = 'nenkpLPkmazCGyHafE5emP';
 
 const options = {
